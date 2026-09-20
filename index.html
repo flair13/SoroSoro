@@ -842,6 +842,11 @@
           <input type="file" id="importSqliteFile" accept=".sqlite,.db,.sqlite3" style="display:none">
         </label>
         <button type="button" class="options-item" id="exportCsvBtn">CSVで書き出す</button>
+        <label class="options-item import-btn" id="importBackupBtn">
+          完全バックアップを読み込む
+          <input type="file" id="importBackupFile" accept=".json,application/json" style="display:none">
+        </label>
+        <button type="button" class="options-item" id="exportBackupBtn">完全バックアップを書き出す</button>
         <button type="button" class="options-item" id="showSecretBtn">🔒 シークレットを表示</button>
         <div class="options-item options-theme">
           <div class="options-theme-label">テーマカラー</div>
@@ -2229,6 +2234,92 @@
     }
   }
 
+  // ---------- Full backup (JSON) export/import ----------
+  // Unlike the CSV export, this captures every bit of app data this device
+  // holds in localStorage -- full log history, photos, colors/icons, and
+  // secret/passcode settings (the passcode hash lives inside each event) --
+  // so a user can move fully from one hosting URL/origin to another without
+  // losing anything. Keys are collected dynamically (anything starting with
+  // "keika_dot_") so this stays correct even if new settings are added later.
+  function collectBackupData(){
+    var data = {};
+    for(var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf("keika_dot_") === 0){
+        data[k] = localStorage.getItem(k);
+      }
+    }
+    return data;
+  }
+
+  async function exportBackup(){
+    var payload = {
+      app: "SoroSoro",
+      backupVersion: 1,
+      exportedAt: new Date().toISOString(),
+      data: collectBackupData()
+    };
+    var json = JSON.stringify(payload, null, 2);
+    var stamp = new Date().toISOString().slice(0,10);
+    var filename = "sorosoro_backup_" + stamp + ".json";
+    var downloads = await useCapability("downloads");
+    if(downloads){
+      try{
+        await downloads.save({ filename: filename, data: json });
+        showToast("完全バックアップを書き出しました");
+      }catch(e){
+        showToast("書き出しをキャンセルしました");
+      }
+    } else {
+      var blob = new Blob([json], {type:"application/json"});
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      showToast("完全バックアップを書き出しました");
+    }
+  }
+
+  function importBackupFile(file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var payload;
+      try{
+        payload = JSON.parse(String(reader.result));
+      }catch(e){
+        showToast("バックアップファイルの読み込みに失敗しました");
+        return;
+      }
+      var data = payload && payload.data;
+      if(!data || typeof data !== "object"){
+        showToast("バックアップファイルの形式が正しくありません");
+        return;
+      }
+      var keys = Object.keys(data).filter(function(k){ return k.indexOf("keika_dot_") === 0; });
+      if(!keys.length){
+        showToast("バックアップファイルの形式が正しくありません");
+        return;
+      }
+      if(!confirm("この端末の記録を、読み込んだバックアップの内容で上書きします。よろしいですか？")){
+        return;
+      }
+      try{
+        keys.forEach(function(k){
+          localStorage.setItem(k, data[k]);
+        });
+      }catch(e){
+        showToast("復元に失敗しました（保存容量の可能性があります）");
+        return;
+      }
+      showToast("完全バックアップを復元しました。再読み込みします…");
+      setTimeout(function(){ location.reload(); }, 700);
+    };
+    reader.onerror = function(){
+      showToast("バックアップファイルの読み込みに失敗しました");
+    };
+    reader.readAsText(file);
+  }
+
   // ---------- CSV import ----------
   // A small RFC4180-ish CSV parser: handles quoted fields, escaped quotes ("")
   // and commas/newlines inside quotes. Works for exports from SinceTimer,
@@ -2606,6 +2697,17 @@
   $("#showSecretBtn").addEventListener("click", function(){
     closeOptionsMenu();
     requestGenericPasscode();
+  });
+  $("#exportBackupBtn").addEventListener("click", function(){
+    exportBackup();
+    closeOptionsMenu();
+  });
+  $("#importBackupFile").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    closeOptionsMenu();
+    if(!file) return;
+    importBackupFile(file);
+    e.target.value = "";
   });
   (function renderThemeSwatches(){
     var wrap = $("#themeSwatches");
