@@ -1,0 +1,2812 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SoroSoro</title>
+<meta name="description" content="最後にやったのはいつ？を記録する経過日数トラッカー">
+
+<!-- PWA: manifest + icons + theme color -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#C97D3F">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SoroSoro">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --paper:#E9E0CB;
+    --paper-raised:#FFFFFF;
+    --ink:#231F1A;
+    --ink-dim:#6B6459;
+    --line:#D6CCAF;
+    --accent:#C97D3F;
+    --accent-ink:#5C3719;
+    --good:#3E7C74;
+    --good-bg:#E4EFEC;
+    --warn:#B4483F;
+    --warn-bg:#F5E4E1;
+    --shadow: 0 1px 3px rgba(35,31,26,.1), 0 10px 26px -12px rgba(35,31,26,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#15120F;
+      --paper-raised:#2E2820;
+      --ink:#EDE7DA;
+      --ink-dim:#A69D8B;
+      --line:#463D2F;
+      --accent:#E0975A;
+      --accent-ink:#2B1B0F;
+      --good:#6FBBAF;
+      --good-bg:#20332E;
+      --warn:#E08278;
+      --warn-bg:#3A2420;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 14px 30px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#15120F;
+    --paper-raised:#2E2820;
+    --ink:#EDE7DA;
+    --ink-dim:#A69D8B;
+    --line:#463D2F;
+    --accent:#E0975A;
+    --accent-ink:#2B1B0F;
+    --good:#6FBBAF;
+    --good-bg:#20332E;
+    --warn:#E08278;
+    --warn-bg:#3A2420;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 14px 30px -14px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box;}
+  /* Text size control: every font-size in this stylesheet is in rem, so
+     scaling the root size scales the whole app proportionally. */
+  html{ font-size:16px; }
+  html[data-textsize="s"]{ font-size:14px; }
+  html[data-textsize="l"]{ font-size:18px; }
+  html[data-textsize="xl"]{ font-size:20px; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:960px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+  }
+  h1,h2,h3{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    text-wrap:balance;
+    margin:0;
+  }
+  .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+
+  /* header */
+  header.top{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .brand{ display:flex; flex-direction:column; gap:2px; }
+  .brand h1{ font-size:1.625rem; letter-spacing:-.01em; }
+  .brand .tagline{ color:var(--ink-dim); font-size:0.84375rem; }
+  .add-btn{
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:999px;
+    padding:11px 20px 11px 16px;
+    font-size:0.90625rem;
+    font-weight:600;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .add-btn:hover{ opacity:.92; }
+
+  /* controls */
+  .controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .search{
+    flex:1 1 220px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:9px 12px;
+  }
+  .search input{
+    border:none;
+    outline:none;
+    background:transparent;
+    color:var(--ink);
+    font-size:0.875rem;
+    width:100%;
+    font-family:inherit;
+  }
+  .search svg{ flex:none; opacity:.5; }
+  .sortsel{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    padding:9px 10px;
+    font-size:0.84375rem;
+    font-family:inherit;
+  }
+  .import-btn{
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    white-space:nowrap;
+  }
+  .options-menu{ position:relative; flex:none; }
+  .options-dropdown[hidden]{ display:none; }
+  .options-dropdown{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:50;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    padding:6px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:200px;
+  }
+  .options-item{
+    display:block;
+    width:100%;
+    text-align:left;
+    border:none;
+    background:none;
+    color:var(--ink);
+    font-size:0.84375rem;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    padding:9px 10px;
+    border-radius:8px;
+  }
+  .options-item:hover{ background:var(--paper); }
+  .options-theme{ cursor:default; }
+  .options-theme:hover{ background:none; }
+  .options-theme-label{ font-size:0.75rem; color:var(--ink-dim); margin-bottom:6px; }
+  .options-theme-swatches{ display:flex; gap:8px; }
+  .theme-swatch{
+    width:26px; height:26px; border-radius:999px;
+    border:2px solid transparent;
+    cursor:pointer;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+  }
+  .theme-swatch.sel{ border-color:var(--ink); }
+  .import-modal{ width:min(560px,100%); }
+  .import-table-wrap{
+    max-height:160px;
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:9px;
+    margin-top:8px;
+  }
+  .import-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:0.71875rem;
+    white-space:nowrap;
+  }
+  .import-table th, .import-table td{
+    padding:6px 8px;
+    border-bottom:1px solid var(--line);
+    text-align:left;
+    max-width:160px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .import-table th{ color:var(--ink-dim); font-weight:600; background:var(--paper); position:sticky; top:0; }
+  .import-map-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:10px;
+  }
+  .import-map-row label{ margin:0; flex:none; width:120px; font-size:0.78125rem; }
+  .import-map-row select{
+    flex:1;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 9px;
+    font-size:0.8125rem;
+    font-family:inherit;
+    color:var(--ink);
+  }
+  .import-summary{ font-size:0.78125rem; color:var(--ink-dim); margin-top:10px; }
+  .view-toggle{
+    display:flex;
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--paper-raised);
+    flex:none;
+  }
+  .view-btn{
+    border:none;
+    background:transparent;
+    color:var(--ink-dim);
+    padding:0 11px;
+    height:100%;
+    min-height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  .view-btn + .view-btn{ border-left:1px solid var(--line); }
+  .view-btn.active{ background:var(--ink); color:var(--paper); }
+  .lock-toggle{
+    display:flex; align-items:center; gap:6px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--paper-raised);
+    color:var(--ink-dim);
+    min-height:36px;
+    padding:0 12px;
+    font-size:0.78125rem; font-weight:600;
+    cursor:pointer;
+    flex:none;
+  }
+  .lock-toggle.active{
+    background:var(--warn-bg); color:var(--warn); border-color:var(--warn-bg);
+  }
+
+  .cats{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+  }
+  .cat-pill{
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink-dim);
+    border-radius:999px;
+    padding:6px 13px;
+    font-size:0.78125rem;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .cat-pill.active{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:var(--paper);
+  }
+  #tagBar{ margin-top:-12px; }
+
+  /* comment (latest log's note) shown below the elapsed-day count */
+  .card-comment{
+    font-size:0.78125rem;
+    color:var(--ink-dim);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:6px 9px;
+    margin-top:2px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    cursor:pointer;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .card-comment.expanded{
+    display:block;
+    max-height:140px;
+    overflow-y:auto;
+    -webkit-line-clamp:unset;
+  }
+
+  /* small "#tag" chips shown on a card/list-row/detail view */
+  .card-tags{ display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+  .tag-chip{
+    font-size:0.65625rem;
+    color:var(--ink-dim);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:1px 8px;
+    white-space:nowrap;
+  }
+  .list-tags{
+    font-size:0.6875rem;
+    color:var(--ink-dim);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* secret (passcode-protected) events */
+  .secret-lock{
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-left:4px; font-size:0.75rem; vertical-align:middle;
+    opacity:0.75;
+  }
+  .secret-field{ margin-top:10px; }
+  .secret-check{
+    display:flex; align-items:center; gap:8px;
+    font-size:0.875rem; font-weight:600;
+    margin-top:14px;
+  }
+  .secret-check input{ width:auto; }
+  .passcode-note{ font-size:0.71875rem; color:var(--ink-dim); margin-top:2px; }
+  .passcode-prompt-body{ padding:18px; text-align:center; }
+  .passcode-prompt-body input{
+    text-align:center; letter-spacing:0.3em; font-size:1.25rem;
+    margin-top:12px;
+  }
+
+  /* grid */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+    gap:14px;
+  }
+  .card{
+    position:relative;
+    background:var(--paper-raised);
+    border:1.5px solid var(--line);
+    border-radius:26px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+    min-width:0;
+    min-height:168px;
+    overflow:hidden;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .card:active{
+    transform:scale(.97);
+    box-shadow:none;
+  }
+  @media (hover:hover){
+    .card:hover{ border-color:var(--accent); }
+  }
+  .card:not(.has-bg){
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:16px;
+  }
+  /* Photo cards: the name row always spans the full card width (so the
+     photo can never crowd out the event name); below it, a row splits
+     into a text column and the photo filling ~2/3, with the record
+     button riding on top of the photo, bottom-right. */
+  .card.has-bg{
+    display:flex;
+    flex-direction:column;
+  }
+  .card.has-bg .card-top{
+    padding:14px 14px 0 16px;
+  }
+  .card-lower{
+    display:flex;
+    flex:1;
+    align-items:stretch;
+    min-height:0;
+    gap:10px;
+    padding:0 12px 12px 16px;
+  }
+  .card-left{
+    flex:1 1 32%;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:8px;
+    padding:6px 0 2px 0;
+  }
+  .card-photo{
+    position:relative;
+    flex:0 0 62%;
+    min-width:0;
+    overflow:hidden;
+    border-radius:16px;
+    border:1px solid var(--line);
+  }
+  .card-bg-img{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    pointer-events:none;
+  }
+  .card-photo .record-btn{
+    position:absolute; right:8px; bottom:8px; z-index:2;
+    box-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
+  .card-top{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-width:0;
+  }
+  .dot{
+    width:30px;height:30px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1rem;flex:none;
+  }
+  .card-name{
+    font-size:0.90625rem;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .card-cat{ font-size:0.71875rem; color:var(--ink-dim); }
+  .card-count{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+    cursor:pointer;
+    width:fit-content;
+  }
+  .card-count .num{ font-size:2.125rem; font-weight:600; line-height:1; }
+  .card-count .unit{ font-size:0.8125rem; color:var(--ink-dim); }
+  .card-count.date-mode{ flex-direction:column; align-items:flex-start; gap:1px; }
+  .card-count.date-mode .num{ font-size:1.125rem; line-height:1.2; }
+  .card-count.date-mode .unit{ font-size:0.6875rem; }
+  .card-bottom{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .pill{
+    font-size:0.6875rem;font-weight:700;
+    border-radius:999px;padding:4px 9px;
+    letter-spacing:.01em;
+  }
+  .pill.good{ background:var(--good-bg); color:var(--good); }
+  .pill.warn{ background:var(--warn-bg); color:var(--warn); }
+  .pill.neutral{ background:var(--paper); color:var(--ink-dim); border:1px solid var(--line); }
+  .record-btn{
+    border:none;
+    background:var(--accent);
+    color:var(--accent-ink);
+    font-weight:700;
+    font-size:0.78125rem;
+    border-radius:9px;
+    padding:8px 11px;
+    cursor:pointer;
+    flex:none;
+    box-shadow:0 1px 3px rgba(0,0,0,.2);
+  }
+  .record-btn:active{ transform:scale(.96); }
+
+  /* list view */
+  .list-view{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .list-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--paper-raised);
+    border:1.5px solid var(--line);
+    border-radius:20px;
+    padding:9px 12px;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .list-row:active{
+    transform:scale(.98);
+  }
+  @media (hover:hover){
+    .list-row:hover{ border-color:var(--accent); }
+  }
+  .list-thumb{
+    width:42px;height:42px;border-radius:10px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.125rem;
+    background-size:cover;
+    background-position:center;
+    overflow:hidden;
+  }
+  .list-main{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+  }
+  .list-name{
+    font-size:0.875rem;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .list-cat{ font-size:0.71875rem; color:var(--ink-dim); }
+  .list-count{
+    flex:none;
+    display:flex;
+    align-items:baseline;
+    gap:4px;
+    min-width:64px;
+    justify-content:flex-end;
+    cursor:pointer;
+  }
+  .list-count .num{ font-size:1.1875rem; font-weight:600; }
+  .list-count .unit{ font-size:0.6875rem; color:var(--ink-dim); }
+  .list-count.date-mode{ min-width:86px; }
+  .list-count.date-mode .num{ font-size:0.875rem; }
+  .list-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:none;
+  }
+  .list-row .pill{ flex:none; }
+  .list-row .record-btn{ padding:7px 10px; }
+
+  .empty{
+    text-align:center;
+    padding:70px 20px;
+    color:var(--ink-dim);
+  }
+  .empty h2{ font-size:1.1875rem; color:var(--ink); margin-bottom:6px;}
+  .empty p{ font-size:0.875rem; margin:0 0 16px; }
+
+  /* drawer / modal */
+  .scrim{
+    position:fixed; inset:0;
+    background:rgba(20,17,13,.42);
+    display:flex;
+    justify-content:flex-end;
+    z-index:50;
+  }
+  .scrim.center{ justify-content:center; align-items:center; padding:20px; }
+  .panel{
+    background:var(--paper);
+    width:min(420px,100%);
+    height:100%;
+    overflow-y:auto;
+    box-shadow:-10px 0 30px rgba(0,0,0,.15);
+  }
+  .panel-body{ padding:22px 20px 40px; }
+  .panel-hero{
+    position:relative;
+    height:200px;
+    overflow:hidden;
+    display:flex;
+    align-items:flex-end;
+    padding:16px 20px;
+  }
+  /* Smoky haze anchored where the icon + name sit (bottom-left), not a hard box behind the text. */
+  .panel-hero::before{
+    content:"";
+    position:absolute; inset:0; z-index:1;
+    background:radial-gradient(130% 130% at 25% 100%,
+      rgba(8,6,4,.75) 0%,
+      rgba(8,6,4,.55) 30%,
+      rgba(8,6,4,.28) 55%,
+      rgba(8,6,4,.06) 75%,
+      rgba(8,6,4,0) 90%);
+  }
+  .panel-hero > *{ position:relative; z-index:2; }
+  .panel-hero-img{
+    position:absolute !important; inset:0; z-index:0 !important;
+    width:100%; height:100%;
+    object-fit:cover;
+    pointer-events:none;
+  }
+  .panel-hero .icon-btn{
+    position:absolute; top:16px; right:16px; z-index:3;
+    color:#fff; background:rgba(0,0,0,.4); border-radius:999px;
+    width:30px;height:30px; display:flex;align-items:center;justify-content:center;
+  }
+  .panel-hero-name{
+    color:#fff; font-family:'Fraunces',serif; font-weight:600; font-size:1.375rem;
+    text-shadow:0 1px 4px rgba(0,0,0,.7), 0 2px 18px rgba(0,0,0,.55);
+  }
+  .panel-hero .dot{
+    background:rgba(255,255,255,.22);
+    color:#fff;
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,.3);
+  }
+  .panel-no-hero{ padding:22px 20px 0; }
+  .modal{
+    background:var(--paper);
+    width:min(440px,100%);
+    max-height:88vh;
+    overflow-y:auto;
+    border-radius:18px;
+    padding:22px 22px 26px;
+    box-shadow:var(--shadow);
+  }
+  .panel-head, .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .icon-btn{
+    background:none;border:none;color:var(--ink-dim);
+    font-size:1.25rem;line-height:1;cursor:pointer;padding:4px;
+  }
+  label{
+    display:block;font-size:0.78125rem;font-weight:600;color:var(--ink-dim);
+    margin:14px 0 6px;
+  }
+  label:first-of-type{ margin-top:0; }
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    width:100%;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:9px;
+    padding:10px 11px;
+    font-size:0.90625rem;
+    font-family:inherit;
+    outline:none;
+  }
+  input:focus, select:focus, textarea:focus{ border-color:var(--accent); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .mode-toggle{ display:flex; gap:8px; }
+  .mode-toggle button{
+    flex:1; padding:10px; border-radius:9px; border:1px solid var(--line);
+    background:var(--paper-raised); color:var(--ink); font-size:0.84375rem; font-weight:600;
+    cursor:pointer; font-family:inherit;
+  }
+  .mode-toggle button.sel{ background:var(--ink); border-color:var(--ink); color:var(--paper); }
+  .swatches{ display:flex; gap:8px; flex-wrap:wrap; }
+  .swatch{
+    width:28px;height:28px;border-radius:8px;cursor:pointer;
+    border:2px solid transparent;
+  }
+  .swatch.sel{ border-color:var(--ink); }
+  .emojis{ display:flex; gap:6px; flex-wrap:wrap; }
+  .emoji-btn{
+    width:36px;height:36px;border-radius:9px;border:1px solid var(--line);
+    background:var(--paper-raised);font-size:1.0625rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .emoji-btn.sel{ border-color:var(--accent); background:var(--good-bg); }
+  .bg-picker{
+    border:1.5px dashed var(--line);
+    border-radius:12px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .bg-file-label{
+    display:inline-block;
+    font-size:0.78125rem;font-weight:600;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:7px 11px;
+    cursor:pointer;
+    width:fit-content;
+  }
+  .bg-file-label input{ display:none; }
+  .bg-remove{
+    font-size:0.75rem; color:var(--warn); background:none; border:none;
+    cursor:pointer; padding:0; width:fit-content; font-family:inherit;
+    margin-top:2px;
+  }
+  .bg-note{ font-size:0.71875rem; color:var(--ink-dim); }
+  .bg-adjust-preview{
+    position:relative;
+    width:100%;
+    height:150px;
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--paper);
+    border:1px solid var(--line);
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+  }
+  .bg-adjust-preview.dragging{ cursor:grabbing; }
+  .bg-adjust-preview img{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    pointer-events:none;
+  }
+  .bg-adjust-hint{
+    position:absolute; top:8px; right:8px;
+    font-size:0.65625rem; font-weight:600; color:#fff;
+    background:rgba(10,8,6,.5);
+    -webkit-backdrop-filter:blur(3px);
+    backdrop-filter:blur(3px);
+    padding:3px 8px; border-radius:999px;
+    pointer-events:none;
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--accent);
+    margin-top:4px;
+  }
+  .form-actions{ display:flex; gap:10px; margin-top:22px; }
+  .btn-primary{
+    flex:1; background:var(--ink); color:var(--paper); border:none;
+    border-radius:10px; padding:12px; font-weight:700; font-size:0.90625rem; cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-ghost{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    border-radius:10px; padding:12px 16px; font-weight:600; font-size:0.84375rem; cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-danger{ color:var(--warn); }
+
+  /* detail */
+  .detail-hero{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px; cursor:pointer; width:fit-content; }
+  .detail-num{ font-size:2.875rem; font-weight:600; line-height:1; }
+  .detail-hero.date-mode .detail-num{ font-size:1.75rem; }
+  .detail-hero .unit{ font-size:0.8125rem; color:var(--ink-dim); }
+  .stat-row{
+    display:flex; gap:10px; margin:18px 0;
+  }
+  .stat{
+    flex:1; background:var(--paper-raised); border:1px solid var(--line);
+    border-radius:12px; padding:11px 12px;
+  }
+  .stat .k{ font-size:0.6875rem; color:var(--ink-dim); margin-bottom:3px; }
+  .stat .v{ font-size:1.0625rem; font-weight:600; }
+  .hist-title{ font-size:0.78125rem; font-weight:700; color:var(--ink-dim); margin:20px 0 8px; text-transform:uppercase; letter-spacing:.03em;}
+  .hist-item{
+    padding:9px 2px; border-bottom:1px solid var(--line); font-size:0.84375rem;
+    cursor:pointer; border-radius:8px;
+  }
+  .hist-item:hover{ background:var(--paper-raised); }
+  .hist-item:last-child{ border-bottom:none; }
+  .hist-date-row{ display:flex; justify-content:space-between; align-items:center; }
+  .hist-note{ color:var(--ink-dim); font-size:0.78125rem; margin-top:3px; line-height:1.4; }
+  .hist-ago{ color:var(--ink-dim); font-size:0.75rem; }
+  .detail-actions{ display:flex; gap:8px; margin-top:20px; }
+  .threshold-note{ font-size:0.75rem; color:var(--ink-dim); margin-top:4px; }
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:var(--paper); padding:10px 18px;
+    border-radius:999px; font-size:0.84375rem; font-weight:600; box-shadow:var(--shadow);
+    z-index:100; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
+  .offline-note{
+    font-size:0.75rem; color:var(--warn); background:var(--warn-bg);
+    border-radius:9px; padding:8px 11px; margin-bottom:16px;
+  }
+  ::-webkit-scrollbar{ width:9px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:9px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>SoroSoro</h1>
+      <div class="tagline">最後にやったのはいつ？を記録する</div>
+    </div>
+    <button class="add-btn" id="openAdd">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+      追加
+    </button>
+  </header>
+
+  <div id="offlineNote" class="offline-note" style="display:none">
+    データの自動保存に接続できませんでした。この端末・このタブ内でのみ記録が残ります。
+  </div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="イベントを検索">
+    </div>
+    <select class="sortsel" id="sortSel">
+      <option value="elapsed_desc">経過が多い順</option>
+      <option value="elapsed_asc">経過が少ない順</option>
+      <option value="name">名前順</option>
+      <option value="new">新しい順</option>
+    </select>
+    <div class="options-menu" id="optionsMenu">
+      <button type="button" class="lock-toggle" id="optionsToggle" title="オプション">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+        <span>オプション</span>
+      </button>
+      <div class="options-dropdown" id="optionsDropdown" hidden>
+        <label class="options-item import-btn" id="importBtn">
+          CSVを読み込む
+          <input type="file" id="importFile" accept=".csv,text/csv" style="display:none">
+        </label>
+        <label class="options-item import-btn" id="importSqliteBtn">
+          SinceTimerを読み込む
+          <input type="file" id="importSqliteFile" accept=".sqlite,.db,.sqlite3" style="display:none">
+        </label>
+        <button type="button" class="options-item" id="exportCsvBtn">CSVで書き出す</button>
+        <button type="button" class="options-item" id="showSecretBtn">🔒 シークレットを表示</button>
+        <div class="options-item options-theme">
+          <div class="options-theme-label">テーマカラー</div>
+          <div class="options-theme-swatches" id="themeSwatches"></div>
+        </div>
+      </div>
+    </div>
+    <div class="view-toggle" id="viewToggle">
+      <button type="button" class="view-btn" data-view="kanban" title="カンバン表示">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/></svg>
+      </button>
+      <button type="button" class="view-btn" data-view="list" title="リスト表示">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      </button>
+    </div>
+    <button type="button" class="lock-toggle" id="lockToggle" title="記録ボタンをロック">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span id="lockLabel">ロック</span>
+    </button>
+    <button type="button" class="lock-toggle" id="textSizeToggle" title="文字サイズを変更">
+      <span style="font-weight:700">A</span>
+      <span id="textSizeLabel">標準</span>
+    </button>
+    <button type="button" class="lock-toggle" id="colorModeToggle" title="ライト/ダーク切り替え">
+      <span id="colorModeIcon">🌓</span>
+      <span id="colorModeLabel">自動</span>
+    </button>
+  </div>
+
+  <div class="cats" id="catBar"></div>
+  <div class="cats" id="tagBar"></div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none">
+    <h2>まだ何も記録されていません</h2>
+    <p>「追加」から、経過日数を追いたいことを登録してみましょう。</p>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var EMOJIS = [
+    "🧹","💊","🪥","🚿","🌱","🚗","💇","🏋️","🐈","🩺",
+    "📮","🧺","🚬","💰","🎬","✈️","📚","🧴","🔋","🎂",
+    "🍳","🍚","🍞","🏦","🏥","🛍️","🍻","🗺️","🚆","🏨",
+    "🎁","📦","⚽","🏠","🎉","❓","🔒","🐾",
+    "💻","📱","🌐","👗","👟","👨","👦","👩","🏡"
+  ];
+  var COLORS = ["#C97D3F","#3E7C74","#6B6FB0","#B4483F","#9A7E3F","#4E8BA6","#8A6BA0","#5C8A4C"];
+
+  var VIEW_KEY = "keika_dot_view_v1";
+  function loadView(){
+    try{
+      var v = localStorage.getItem(VIEW_KEY);
+      return (v === "list" || v === "kanban") ? v : "kanban";
+    }catch(e){ return "kanban"; }
+  }
+  function saveView(v){
+    try{ localStorage.setItem(VIEW_KEY, v); }catch(e){}
+  }
+
+  // Lock mode: when on, the one-tap "今やった" record buttons are hidden so a
+  // glance at elapsed days can't accidentally log a new record.
+  var LOCK_KEY = "keika_dot_locked_v1";
+  function loadLock(){
+    try{ return localStorage.getItem(LOCK_KEY) === "1"; }catch(e){ return false; }
+  }
+  function saveLock(v){
+    try{ localStorage.setItem(LOCK_KEY, v ? "1" : "0"); }catch(e){}
+  }
+
+  // Sort order: remembered across visits so the app reopens with whatever
+  // ordering was last in use.
+  var SORT_KEY = "keika_dot_sort_v1";
+  var SORT_VALUES = ["elapsed_desc", "elapsed_asc", "name", "new"];
+  function loadSort(){
+    try{
+      var v = localStorage.getItem(SORT_KEY);
+      return SORT_VALUES.indexOf(v) !== -1 ? v : "elapsed_desc";
+    }catch(e){ return "elapsed_desc"; }
+  }
+  function saveSort(v){
+    try{ localStorage.setItem(SORT_KEY, v); }catch(e){}
+  }
+
+  // Light/dark mode: "auto" follows the OS (prefers-color-scheme, the
+  // default), or the person can pin it to "light" / "dark" regardless of the
+  // system setting. Stored as the html[data-theme] attribute, which the CSS
+  // above already branches on.
+  var MODE_KEY = "keika_dot_colormode_v1";
+  var MODES = ["auto", "light", "dark"];
+  var MODE_META = {
+    auto:  { icon:"🌓", label:"自動" },
+    light: { icon:"☀️", label:"ライト" },
+    dark:  { icon:"🌙", label:"ダーク" }
+  };
+  function loadColorMode(){
+    try{
+      var v = localStorage.getItem(MODE_KEY);
+      return MODES.indexOf(v) !== -1 ? v : "auto";
+    }catch(e){ return "auto"; }
+  }
+  function saveColorMode(v){
+    try{ localStorage.setItem(MODE_KEY, v); }catch(e){}
+  }
+  var currentColorMode = loadColorMode();
+  function applyColorMode(mode){
+    currentColorMode = mode;
+    if(mode === "auto"){
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", mode);
+    }
+    var meta = MODE_META[mode];
+    var iconEl = document.getElementById("colorModeIcon");
+    var labelEl = document.getElementById("colorModeLabel");
+    if(iconEl) iconEl.textContent = meta.icon;
+    if(labelEl) labelEl.textContent = meta.label;
+    applyTheme(currentTheme); // re-pick the theme's light/dark accent variant
+  }
+
+  // Theme color: an app-wide accent color the user can switch from the
+  // options menu. Applied as inline custom properties on <html>, which beat
+  // any stylesheet rule (including the prefers-color-scheme block), so we
+  // pick the light/dark variant ourselves and re-apply if the OS theme flips
+  // while the app is open.
+  var THEME_KEY = "keika_dot_theme_v1";
+  var THEMES = [
+    { key:"amber",  label:"アンバー（標準）", swatch:"#C97D3F", light:{accent:"#C97D3F", accentInk:"#5C3719"}, dark:{accent:"#E0975A", accentInk:"#2B1B0F"} },
+    { key:"forest", label:"フォレスト",       swatch:"#4F7A52", light:{accent:"#4F7A52", accentInk:"#1E3220"}, dark:{accent:"#7FB37D", accentInk:"#132015"} },
+    { key:"ocean",  label:"オーシャン",       swatch:"#3B76A6", light:{accent:"#3B76A6", accentInk:"#122B3E"}, dark:{accent:"#6FA8D8", accentInk:"#0E2331"} },
+    { key:"berry",  label:"ベリー",           swatch:"#A6456A", light:{accent:"#A6456A", accentInk:"#3B1420"}, dark:{accent:"#D97C9B", accentInk:"#2E0F18"} },
+    { key:"mono",   label:"モノクロ",         swatch:"#4A4A46", light:{accent:"#4A4A46", accentInk:"#FFFFFF"}, dark:{accent:"#B8B2A5", accentInk:"#231F1A"} }
+  ];
+  function loadTheme(){
+    try{
+      var v = localStorage.getItem(THEME_KEY);
+      return THEMES.some(function(t){ return t.key === v; }) ? v : "amber";
+    }catch(e){ return "amber"; }
+  }
+  function saveTheme(v){
+    try{ localStorage.setItem(THEME_KEY, v); }catch(e){}
+  }
+  var currentTheme = loadTheme();
+  function applyTheme(key){
+    currentTheme = key;
+    var theme = THEMES.find(function(t){ return t.key === key; }) || THEMES[0];
+    var dt = document.documentElement.getAttribute("data-theme");
+    var isDark = dt === "dark" || (dt !== "light" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var c = isDark ? theme.dark : theme.light;
+    document.documentElement.style.setProperty("--accent", c.accent);
+    document.documentElement.style.setProperty("--accent-ink", c.accentInk);
+  }
+  if(window.matchMedia){
+    var darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    var onDarkModeChange = function(){ applyTheme(currentTheme); };
+    if(darkModeQuery.addEventListener) darkModeQuery.addEventListener("change", onDarkModeChange);
+    else if(darkModeQuery.addListener) darkModeQuery.addListener(onDarkModeChange);
+  }
+
+  // Secret events: the passcode is never stored in plain text, only a simple
+  // hash of it. This isn't real cryptography -- it's enough to keep the
+  // number from sitting in localStorage as-is, while staying dependency-free.
+  // Unlocked ids live only in memory, so every fresh app load re-locks them.
+  function hashPasscode(pin){
+    var str = String(pin);
+    var h = 5381;
+    for(var i = 0; i < str.length; i++){
+      h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+    }
+    return "h" + h.toString(16);
+  }
+  var unlockedSecrets = {};
+  function isSecretLocked(ev){
+    return !!(ev && ev.secret && !unlockedSecrets[ev.id]);
+  }
+  function unlockSecret(id){ unlockedSecrets[id] = true; }
+
+  function requestPasscode(ev, onSuccess){
+    var scrim = document.createElement("div");
+    scrim.className = "scrim center";
+    scrim.innerHTML =
+      '<div class="modal" style="max-width:320px">' +
+        '<div class="modal-head"><h3>🔒 ' + escapeHtml(ev.name) + '</h3><button class="icon-btn" id="closePasscode">&times;</button></div>' +
+        '<div class="passcode-prompt-body">' +
+          '<div>パスコードを入力してください</div>' +
+          '<input type="password" inputmode="numeric" id="f_enterPasscode" placeholder="••••" autocomplete="off">' +
+          '<div class="form-actions" style="margin-top:16px;justify-content:center">' +
+            '<button class="btn-primary" id="submitPasscode">確認</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) scrim.remove(); });
+    scrim.querySelector("#closePasscode").addEventListener("click", function(){ scrim.remove(); });
+    var input = scrim.querySelector("#f_enterPasscode");
+    input.focus();
+    function attempt(){
+      var v = input.value;
+      if(!v || hashPasscode(v) !== ev.passcodeHash){
+        showToast("パスコードが違います");
+        input.value = "";
+        input.focus();
+        return;
+      }
+      unlockSecret(ev.id);
+      scrim.remove();
+      onSuccess();
+    }
+    scrim.querySelector("#submitPasscode").addEventListener("click", attempt);
+    input.addEventListener("keydown", function(e){ if(e.key === "Enter") attempt(); });
+  }
+
+  function relockSecret(id){ delete unlockedSecrets[id]; }
+
+  // Secret events don't appear in the list at all until unlocked, so there's
+  // no card to tap to trigger a passcode prompt. This is the generic entry
+  // point (from the options menu): it doesn't name any event up front, and
+  // matches the entered passcode against every still-locked secret event,
+  // unlocking whichever one(s) it matches.
+  function requestGenericPasscode(){
+    var scrim = document.createElement("div");
+    scrim.className = "scrim center";
+    scrim.innerHTML =
+      '<div class="modal" style="max-width:320px">' +
+        '<div class="modal-head"><h3>🔒 シークレットを表示</h3><button class="icon-btn" id="closePasscode">&times;</button></div>' +
+        '<div class="passcode-prompt-body">' +
+          '<div>パスコードを入力してください</div>' +
+          '<input type="password" inputmode="numeric" id="f_enterPasscode" placeholder="••••" autocomplete="off">' +
+          '<div class="form-actions" style="margin-top:16px;justify-content:center">' +
+            '<button class="btn-primary" id="submitPasscode">確認</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) scrim.remove(); });
+    scrim.querySelector("#closePasscode").addEventListener("click", function(){ scrim.remove(); });
+    var input = scrim.querySelector("#f_enterPasscode");
+    input.focus();
+    function attempt(){
+      var v = input.value;
+      if(!v){ return; }
+      var hash = hashPasscode(v);
+      var matched = state.events.filter(function(e){
+        return e.secret && !unlockedSecrets[e.id] && e.passcodeHash === hash;
+      });
+      if(!matched.length){
+        showToast("パスコードが違います");
+        input.value = "";
+        input.focus();
+        return;
+      }
+      matched.forEach(function(e){ unlockSecret(e.id); });
+      scrim.remove();
+      showToast(matched.length + "件のシークレットを表示しました");
+      render();
+    }
+    scrim.querySelector("#submitPasscode").addEventListener("click", attempt);
+    input.addEventListener("keydown", function(e){ if(e.key === "Enter") attempt(); });
+  }
+
+  // Runs fn(id) immediately for a non-secret (or already-unlocked) event; for
+  // a locked secret event, prompts for the passcode first and only runs fn
+  // after it's confirmed.
+  function withSecretUnlock(id, fn){
+    var ev = state.events.find(function(e){ return e.id === id; });
+    if(!ev){ return; }
+    if(isSecretLocked(ev)){
+      requestPasscode(ev, function(){ fn(id); });
+      return;
+    }
+    fn(id);
+  }
+
+  var state = {
+    events: [],
+    filterCat: "all",
+    filterTag: "all",
+    search: "",
+    sort: loadSort(),
+    view: loadView(),
+    locked: loadLock(),
+    db: null,
+    dbReady: false
+  };
+
+  var $ = function(s){ return document.querySelector(s); };
+  var grid = $("#grid");
+  var catBar = $("#catBar");
+  var tagBar = $("#tagBar");
+  var emptyState = $("#emptyState");
+
+  // ---------- local fallback store (used only if db capability is unavailable) ----------
+  var LOCAL_KEY = "keika_dot_events_v1";
+  function loadLocal(){
+    try{
+      var raw = localStorage.getItem(LOCAL_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveLocal(){
+    try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(state.events)); }catch(e){}
+  }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  // Read an image file, downscale it on a canvas, and resolve a compact JPEG data URL.
+  // Keeps stored events small (localStorage / the db capability's 256KiB-per-document cap).
+  function readAndResizeImage(file, maxW){
+    maxW = maxW || 800;
+    return new Promise(function(resolve, reject){
+      if(!file || file.type.indexOf("image/") !== 0){ reject(new Error("not an image")); return; }
+      var reader = new FileReader();
+      reader.onerror = function(){ reject(new Error("read failed")); };
+      reader.onload = function(){
+        var img = new Image();
+        img.onerror = function(){ reject(new Error("decode failed")); };
+        img.onload = function(){
+          var scale = Math.min(1, maxW / img.width);
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          var quality = 0.72;
+          var dataUrl = canvas.toDataURL("image/jpeg", quality);
+          // Nudge quality down if still large, to stay well under storage limits.
+          while(dataUrl.length > 170000 && quality > 0.35){
+            quality -= 0.12;
+            dataUrl = canvas.toDataURL("image/jpeg", quality);
+          }
+          resolve(dataUrl);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function showToast(msg){
+    var t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+
+  // ---------- day math ----------
+  var DAY = 86400000;
+  // Calendar-day difference (not a raw 24h-multiple check): both timestamps
+  // are snapped to local midnight first, so every event's day count ticks
+  // over at midnight together, regardless of what time of day it was
+  // recorded. Math.round (not floor) absorbs the odd 23h/25h day that DST
+  // transitions can produce, which would otherwise throw the count off by one.
+  function startOfDay(ts){
+    var d = new Date(ts);
+    d.setHours(0,0,0,0);
+    return d.getTime();
+  }
+  function daysBetween(a,b){ return Math.round((startOfDay(b) - startOfDay(a))/DAY); }
+
+  function elapsedDaysFor(ev){
+    if(ev.mode === "until"){
+      return daysBetween(Date.now(), ev.targetDate);
+    }
+    return daysBetween(ev.lastDone, Date.now());
+  }
+
+  function statusFor(ev){
+    if(ev.mode === "until"){
+      var d = elapsedDaysFor(ev);
+      if(d < 0) return {cls:"neutral", label:"経過"};
+      if(d <= 2) return {cls:"warn", label:"もうすぐ"};
+      return {cls:"good", label:"予定あり"};
+    }
+    var d2 = elapsedDaysFor(ev);
+    if(ev.thresholdDays != null && d2 >= ev.thresholdDays) return {cls:"warn", label:"そろそろ"};
+    return {cls:"good", label:"順調"};
+  }
+
+  // ---------- rendering ----------
+  function categories(){
+    var set = {};
+    state.events.forEach(function(e){ if(!isSecretLocked(e) && e.category) set[e.category] = true; });
+    return Object.keys(set).sort();
+  }
+
+  function renderCatBar(){
+    var cats = categories();
+    var html = '<button class="cat-pill' + (state.filterCat==="all"?" active":"") + '" data-cat="all">すべて</button>';
+    cats.forEach(function(c){
+      html += '<button class="cat-pill' + (state.filterCat===c?" active":"") + '" data-cat="' + escapeHtml(c) + '">' + escapeHtml(c) + '</button>';
+    });
+    catBar.innerHTML = html;
+    catBar.querySelectorAll(".cat-pill").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        state.filterCat = btn.getAttribute("data-cat");
+        render();
+      });
+    });
+  }
+
+  function allTags(){
+    var set = {};
+    state.events.forEach(function(e){ if(!isSecretLocked(e)) (e.tags||[]).forEach(function(t){ set[t] = true; }); });
+    return Object.keys(set).sort();
+  }
+
+  function renderTagBar(){
+    var tags = allTags();
+    if(!tags.length){
+      tagBar.innerHTML = "";
+      tagBar.style.display = "none";
+      return;
+    }
+    tagBar.style.display = "flex";
+    var html = '<button class="cat-pill' + (state.filterTag==="all"?" active":"") + '" data-tag="all">すべてのタグ</button>';
+    tags.forEach(function(t){
+      html += '<button class="cat-pill' + (state.filterTag===t?" active":"") + '" data-tag="' + escapeHtml(t) + '">#' + escapeHtml(t) + '</button>';
+    });
+    tagBar.innerHTML = html;
+    tagBar.querySelectorAll(".cat-pill").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        state.filterTag = btn.getAttribute("data-tag");
+        render();
+      });
+    });
+  }
+
+  function bgImgTag(ev, cls){
+    if(!ev.bgImage) return "";
+    var posX = (ev.bgPosX != null ? ev.bgPosX : 68);
+    var posY = (ev.bgPosY != null ? ev.bgPosY : 68);
+    var zoom = ev.bgZoom || 1;
+    var style = "object-position:" + posX + "% " + posY + "%;transform:scale(" + zoom + ");transform-origin:" + posX + "% " + posY + "%;";
+    return '<img class="' + cls + '" src="' + ev.bgImage + '" style="' + style + '" alt="">';
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function filteredSorted(){
+    var list = state.events.slice();
+    // Locked secret events are excluded entirely -- not just their detail/
+    // history, the card itself doesn't appear until unlocked this session.
+    list = list.filter(function(e){ return !isSecretLocked(e); });
+    if(state.filterCat !== "all"){
+      list = list.filter(function(e){ return e.category === state.filterCat; });
+    }
+    if(state.filterTag && state.filterTag !== "all"){
+      list = list.filter(function(e){ return (e.tags||[]).indexOf(state.filterTag) !== -1; });
+    }
+    if(state.search.trim()){
+      var q = state.search.trim().toLowerCase();
+      list = list.filter(function(e){
+        if((e.name||"").toLowerCase().indexOf(q) !== -1) return true;
+        return (e.tags||[]).some(function(t){ return t.toLowerCase().indexOf(q) !== -1; });
+      });
+    }
+    list.sort(function(a,b){
+      if(state.sort === "name") return (a.name||"").localeCompare(b.name||"","ja");
+      if(state.sort === "new") return (b.createdAt||0) - (a.createdAt||0);
+      var da = elapsedDaysFor(a), db_ = elapsedDaysFor(b);
+      if(state.sort === "elapsed_asc") return da - db_;
+      return db_ - da;
+    });
+    return list;
+  }
+
+  // ---------- elapsed-day display: tap cycles 経過日数 -> 経過月日数(〇ヶ月〇日) -> 年月日 ----------
+  var dayDisplayMode = {}; // eventId -> 0 (elapsed days) | 1 (〇ヶ月〇日) | 2 (YYYY/M/D)
+  function formatYMD(ms){
+    var d = new Date(ms);
+    return d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
+  }
+  // Calendar-aware months+days between two timestamps (order doesn't matter; always >= 0).
+  function monthDayDiff(msA, msB){
+    var a = new Date(Math.min(msA, msB));
+    var b = new Date(Math.max(msA, msB));
+    var months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+    var days = b.getDate() - a.getDate();
+    if(days < 0){
+      months--;
+      days += new Date(b.getFullYear(), b.getMonth(), 0).getDate(); // days in the month before b
+    }
+    if(months < 0){ months = 0; days = 0; }
+    return { months: months, days: days };
+  }
+  function formatMonthsDays(months, days){
+    if(months === 0 && days === 0) return "0日";
+    if(months === 0) return days + "日";
+    if(days === 0) return months + "ヶ月";
+    return months + "ヶ月" + days + "日";
+  }
+  function dayParts(ev){
+    var mode = dayDisplayMode[ev.id] || 0;
+    var d = elapsedDaysFor(ev);
+    var numLabel = ev.mode === "until" ? (d < 0 ? Math.abs(d) : d) : d;
+    var unit = ev.mode === "until" ? (d < 0 ? "日超過" : "日後") : "日経過";
+    if(mode === 0){
+      return { numHtml: numLabel, unitText: unit, dateMode: false };
+    }
+    var baseDate = ev.mode === "until" ? ev.targetDate : ev.lastDone;
+    if(mode === 1){
+      var diff = monthDayDiff(baseDate, Date.now());
+      var suffix = ev.mode === "until" ? (d < 0 ? "超過" : "後") : "経過";
+      return { numHtml: formatMonthsDays(diff.months, diff.days), unitText: suffix, dateMode: true };
+    }
+    return {
+      numHtml: formatYMD(baseDate),
+      unitText: ev.mode === "until" ? "予定日" : "最終日",
+      dateMode: true
+    };
+  }
+  function dayCellHtml(ev, wrapClass){
+    var p = dayParts(ev);
+    return (
+      '<div class="' + wrapClass + (p.dateMode ? " date-mode" : "") + '" data-daytap="' + ev.id + '" title="タップで表示切替">' +
+        '<span class="num mono">' + p.numHtml + '</span><span class="unit">' + p.unitText + '</span>' +
+      '</div>'
+    );
+  }
+
+  // The comment shown below the elapsed-day count is the note attached to
+  // the most recent log entry (denormalized onto the event as `lastNote` by
+  // recomputeLastDoneLocal/recomputeLastDone whenever a log is added, edited,
+  // or removed). Collapsed to 2 lines by default; tapping toggles a
+  // scrollable expanded view for longer text, without opening the detail
+  // screen (the click handler on the card/list-row skips [data-commenttap]).
+  function commentHtml(ev){
+    var note = (ev.lastNote || "").trim();
+    if(!note) return "";
+    return '<div class="card-comment" data-commenttap="' + ev.id + '" title="タップで全文表示">' + escapeHtml(note) + '</div>';
+  }
+
+  function tagChipsHtml(ev, limit){
+    var tags = ev.tags || [];
+    if(!tags.length) return "";
+    var shown = tags.slice(0, limit);
+    var extra = tags.length - shown.length;
+    var html = shown.map(function(t){ return '<span class="tag-chip">#' + escapeHtml(t) + '</span>'; }).join("");
+    if(extra > 0) html += '<span class="tag-chip">+' + extra + '</span>';
+    return '<div class="card-tags">' + html + '</div>';
+  }
+
+  function cardHtml(ev){
+    var st = statusFor(ev);
+    var dotStyle = ' style="background:' + ev.color + '22;color:' + ev.color + '"';
+    var topHtml =
+      '<div class="card-top">' +
+        '<div class="dot"' + dotStyle + '>' + ev.icon + '</div>' +
+        '<div style="min-width:0">' +
+          '<div class="card-name">' + escapeHtml(ev.name) + (ev.secret ? '<span class="secret-lock" title="シークレット">🔒</span>' : '') + '</div>' +
+          (ev.category ? '<div class="card-cat">' + escapeHtml(ev.category) + '</div>' : '') +
+          tagChipsHtml(ev, 3) +
+        '</div>' +
+      '</div>';
+    var countHtml = dayCellHtml(ev, "card-count");
+    var pillHtml = '<span class="pill ' + st.cls + '">' + st.label + '</span>';
+    var recordBtnHtml = (ev.mode === "since" && !state.locked)
+      ? '<button class="record-btn" data-record="' + ev.id + '">今やった</button>'
+      : '';
+
+    if(ev.bgImage){
+      // Name row spans the full card width so the photo never crowds it out;
+      // below that, the photo fills ~2/3 with the record button on top of it.
+      return (
+        '<div class="card has-bg" data-id="' + ev.id + '">' +
+          topHtml +
+          '<div class="card-lower">' +
+            '<div class="card-left">' +
+              countHtml +
+              commentHtml(ev) +
+              '<div class="card-bottom">' + pillHtml + '</div>' +
+            '</div>' +
+            '<div class="card-photo">' +
+              bgImgTag(ev, "card-bg-img") +
+              recordBtnHtml +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    return (
+      '<div class="card" data-id="' + ev.id + '">' +
+        topHtml +
+        countHtml +
+        commentHtml(ev) +
+        '<div class="card-bottom">' + pillHtml + recordBtnHtml + '</div>' +
+      '</div>'
+    );
+  }
+
+  function listRowHtml(ev){
+    var st = statusFor(ev);
+    var thumbStyle = ev.bgImage
+      ? ' style="background-image:url(' + ev.bgImage + ');background-position:' + (ev.bgPosX!=null?ev.bgPosX:68) + '% ' + (ev.bgPosY!=null?ev.bgPosY:68) + '%"'
+      : ' style="background:' + ev.color + '22;color:' + ev.color + '"';
+    return (
+      '<div class="list-row" data-id="' + ev.id + '">' +
+        '<div class="list-thumb"' + thumbStyle + '>' + (ev.bgImage ? '' : ev.icon) + '</div>' +
+        '<div class="list-main">' +
+          '<div class="list-name">' + escapeHtml(ev.name) + (ev.secret ? '<span class="secret-lock" title="シークレット">🔒</span>' : '') + '</div>' +
+          (ev.category ? '<div class="list-cat">' + escapeHtml(ev.category) + '</div>' : '') +
+          (ev.tags && ev.tags.length ? '<div class="list-tags">' + ev.tags.map(function(t){ return "#" + escapeHtml(t); }).join(" ") + '</div>' : '') +
+        '</div>' +
+        dayCellHtml(ev, "list-count") +
+        '<div class="list-right">' +
+          '<span class="pill ' + st.cls + '">' + st.label + '</span>' +
+          (ev.mode === "since" && !state.locked ? '<button class="record-btn" data-record="' + ev.id + '">今やった</button>' : '') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function render(){
+    renderCatBar();
+    renderTagBar();
+    var list = filteredSorted();
+    if(state.events.length === 0){
+      grid.style.display = "none";
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    if(state.view === "list"){
+      grid.className = "list-view";
+      grid.style.display = "flex";
+      grid.innerHTML = list.map(listRowHtml).join("");
+      grid.querySelectorAll(".list-row").forEach(function(row){
+        row.addEventListener("click", function(e){
+          if(e.target.closest("[data-record]") || e.target.closest("[data-daytap]") || e.target.closest("[data-commenttap]")) return;
+          withSecretUnlock(row.getAttribute("data-id"), openDetail);
+        });
+      });
+    } else {
+      grid.className = "grid";
+      grid.style.display = "grid";
+      grid.innerHTML = list.map(cardHtml).join("");
+      grid.querySelectorAll(".card").forEach(function(card){
+        card.addEventListener("click", function(e){
+          if(e.target.closest("[data-record]") || e.target.closest("[data-daytap]") || e.target.closest("[data-commenttap]")) return;
+          withSecretUnlock(card.getAttribute("data-id"), openDetail);
+        });
+      });
+    }
+
+    grid.querySelectorAll("[data-record]").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        withSecretUnlock(btn.getAttribute("data-record"), recordNow);
+      });
+    });
+
+    grid.querySelectorAll("[data-daytap]").forEach(function(el){
+      el.addEventListener("click", function(e){
+        e.stopPropagation();
+        var id = el.getAttribute("data-daytap");
+        dayDisplayMode[id] = ((dayDisplayMode[id] || 0) + 1) % 3;
+        render();
+      });
+    });
+
+    // Tap a card's comment to expand it into a scrollable box (for long
+    // notes) instead of navigating into the detail screen; tap again to
+    // collapse back to the 2-line preview.
+    grid.querySelectorAll("[data-commenttap]").forEach(function(el){
+      el.addEventListener("click", function(e){
+        e.stopPropagation();
+        el.classList.toggle("expanded");
+      });
+    });
+  }
+
+  // ---------- persistence layer ----------
+  function eventsCollection(){
+    return state.db ? state.db.collection("events") : null;
+  }
+
+  function upsertEvent(ev){
+    if(state.db){
+      var body = Object.assign({}, ev);
+      delete body.id;
+      return state.db.doc("events/" + ev.id).set(body).catch(function(){
+        showToast("保存に失敗しました");
+      });
+    }
+    var idx = state.events.findIndex(function(e){ return e.id === ev.id; });
+    if(idx === -1) state.events.push(ev); else state.events[idx] = ev;
+    saveLocal();
+    render();
+    return Promise.resolve();
+  }
+
+  function deleteEvent(id){
+    if(state.db){
+      return state.db.doc("events/" + id).delete().catch(function(){
+        showToast("削除に失敗しました");
+      });
+    }
+    state.events = state.events.filter(function(e){ return e.id !== id; });
+    saveLocal();
+    render();
+    return Promise.resolve();
+  }
+
+  function addLog(eventId, at, note){
+    if(state.db){
+      return state.db.doc("events/" + eventId).collection("logs").add({at: at, note: note || ""})
+        .then(function(){ return recomputeLastDone(eventId); });
+    }
+    var ev = state.events.find(function(e){ return e.id === eventId; });
+    if(ev){
+      ev.localLogs = ev.localLogs || [];
+      ev.localLogs.unshift({id: uid(), at: at, note: note || ""});
+      recomputeLastDoneLocal(ev);
+      upsertEvent(ev);
+    }
+    return Promise.resolve();
+  }
+
+  function updateLog(eventId, logId, at, note){
+    if(state.db){
+      return state.db.doc("events/" + eventId).collection("logs").doc(logId)
+        .update({at: at, note: note || ""})
+        .then(function(){ return recomputeLastDone(eventId); });
+    }
+    var ev = state.events.find(function(e){ return e.id === eventId; });
+    if(ev && ev.localLogs){
+      var l = ev.localLogs.find(function(x){ return x.id === logId; });
+      if(l){ l.at = at; l.note = note || ""; }
+      recomputeLastDoneLocal(ev);
+      upsertEvent(ev);
+    }
+    return Promise.resolve();
+  }
+
+  function deleteLog(eventId, logId){
+    if(state.db){
+      return state.db.doc("events/" + eventId).collection("logs").doc(logId).delete()
+        .then(function(){ return recomputeLastDone(eventId); });
+    }
+    var ev = state.events.find(function(e){ return e.id === eventId; });
+    if(ev && ev.localLogs){
+      ev.localLogs = ev.localLogs.filter(function(x){ return x.id !== logId; });
+      recomputeLastDoneLocal(ev);
+      upsertEvent(ev);
+    }
+    return Promise.resolve();
+  }
+
+  function recomputeLastDone(eventId){
+    if(!state.db) return Promise.resolve();
+    return state.db.doc("events/" + eventId).collection("logs")
+      .orderBy("at", "desc").limit(1).get()
+      .then(function(snap){
+        var newest = snap.docs.length ? snap.docs[0].data().at : null;
+        var newestNote = snap.docs.length ? (snap.docs[0].data().note || "") : "";
+        return state.db.doc("events/" + eventId).update({ lastDone: newest, lastNote: newestNote });
+      })
+      .catch(function(){});
+  }
+
+  function recomputeLastDoneLocal(ev){
+    var logs = (ev.localLogs || []).slice().sort(function(a,b){ return b.at - a.at; });
+    ev.lastDone = logs.length ? logs[0].at : null;
+    ev.lastNote = logs.length ? (logs[0].note || "") : "";
+  }
+
+  function getLogs(eventId){
+    if(state.db){
+      return state.db.doc("events/" + eventId).collection("logs")
+        .orderBy("at", "desc").limit(200).get()
+        .then(function(snap){ return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }); })
+        .catch(function(){ return []; });
+    }
+    var ev = state.events.find(function(e){ return e.id === eventId; });
+    return Promise.resolve(((ev && ev.localLogs) || []).slice().sort(function(a,b){ return b.at - a.at; }));
+  }
+
+  function recordNow(id){
+    var ev = state.events.find(function(e){ return e.id === id; });
+    if(!ev) return;
+    ev.lastDone = Date.now(); // optimistic, for instant feedback
+    ev.lastNote = "";
+    render();
+    addLog(id, ev.lastDone, "").then(function(){
+      showToast(escapeHtml(ev.name) + " を記録しました");
+      render();
+      if(activeDetailId === id) openDetail(id);
+    });
+  }
+
+  // ---------- add / edit modal ----------
+  var editingId = null;
+  var formState = { icon: EMOJIS[0], color: COLORS[0], mode: "since" };
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  // Wires the photo picker: file select (resize + reset pan/zoom), the zoom
+  // slider, drag-to-pan on the preview box, and the remove button. Reads
+  // and writes the shared `formState` object for the currently open modal.
+  function setupBgPicker(scrim){
+    var fileInput = scrim.querySelector("#f_bgfile");
+    var fileLabel = scrim.querySelector(".bg-file-label");
+    var wrap = scrim.querySelector("#bgAdjustWrap");
+    var preview = scrim.querySelector("#bgAdjustPreview");
+    var zoomInput = scrim.querySelector("#f_bgzoom");
+    var removeBtn = scrim.querySelector("#f_bgremove");
+
+    function applyTransform(){
+      var img = preview.querySelector("img");
+      if(!img) return;
+      var pos = formState.bgPosX + "% " + formState.bgPosY + "%";
+      img.style.objectPosition = pos;
+      img.style.transform = "scale(" + formState.bgZoom + ")";
+      img.style.transformOrigin = pos;
+    }
+
+    function rebuildPreview(){
+      preview.innerHTML = "";
+      if(!formState.bgImage) return;
+      var img = document.createElement("img");
+      img.src = formState.bgImage;
+      img.alt = "";
+      preview.appendChild(img);
+      var hint = document.createElement("div");
+      hint.className = "bg-adjust-hint";
+      hint.textContent = "ドラッグで位置調整";
+      preview.appendChild(hint);
+      applyTransform();
+    }
+
+    function setHasPhoto(has){
+      wrap.style.display = has ? "block" : "none";
+      fileLabel.firstChild.textContent = has ? "写真を変更" : "写真を選ぶ";
+    }
+
+    fileInput.addEventListener("change", function(e){
+      var file = e.target.files && e.target.files[0];
+      if(!file) return;
+      showToast("写真を読み込み中...");
+      readAndResizeImage(file, 900).then(function(dataUrl){
+        formState.bgImage = dataUrl;
+        formState.bgZoom = 1;
+        formState.bgPosX = 68;
+        formState.bgPosY = 68;
+        zoomInput.value = 100;
+        setHasPhoto(true);
+        rebuildPreview();
+      }).catch(function(){
+        showToast("写真を読み込めませんでした");
+      });
+    });
+
+    zoomInput.addEventListener("input", function(){
+      formState.bgZoom = clamp(parseInt(zoomInput.value, 10), 100, 250) / 100;
+      applyTransform();
+    });
+
+    removeBtn.addEventListener("click", function(){
+      formState.bgImage = null;
+      fileInput.value = "";
+      setHasPhoto(false);
+      preview.innerHTML = "";
+    });
+
+    // Drag-to-pan: grab the photo and move it, panning toward the drag direction.
+    var dragging = false, startX = 0, startY = 0, startPosX = 68, startPosY = 68;
+    preview.addEventListener("pointerdown", function(e){
+      if(!formState.bgImage) return;
+      dragging = true;
+      preview.classList.add("dragging");
+      startX = e.clientX; startY = e.clientY;
+      startPosX = formState.bgPosX; startPosY = formState.bgPosY;
+      try{ preview.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    preview.addEventListener("pointermove", function(e){
+      if(!dragging) return;
+      var rect = preview.getBoundingClientRect();
+      var dxPct = ((e.clientX - startX) / rect.width) * 100;
+      var dyPct = ((e.clientY - startY) / rect.height) * 100;
+      formState.bgPosX = clamp(startPosX - dxPct, 0, 100);
+      formState.bgPosY = clamp(startPosY - dyPct, 0, 100);
+      applyTransform();
+    });
+    function endDrag(){
+      if(dragging){ dragging = false; preview.classList.remove("dragging"); }
+    }
+    preview.addEventListener("pointerup", endDrag);
+    preview.addEventListener("pointerleave", endDrag);
+    preview.addEventListener("pointercancel", endDrag);
+
+    rebuildPreview();
+  }
+
+  // Edge-swipe-to-dismiss: a touch that starts within EDGE_ZONE px of the
+  // left or right screen edge and drags toward the center past THRESHOLD px
+  // closes the modal, like a native back-swipe gesture. A touch that starts
+  // in the middle of the screen (i.e. on the modal box itself, since the
+  // scrim's own edges are what's exposed at the very left/right) is ignored,
+  // as is a mostly-vertical drag (that's a scroll, not a dismiss swipe).
+  function enableEdgeSwipeDismiss(scrim, onDismiss){
+    var EDGE_ZONE = 28, THRESHOLD = 70;
+    var tracking = false, fromLeft = false, startX = 0, startY = 0, done = false;
+    scrim.addEventListener("touchstart", function(e){
+      if(e.touches.length !== 1) return;
+      var t = e.touches[0];
+      var w = window.innerWidth;
+      if(t.clientX <= EDGE_ZONE){ tracking = true; fromLeft = true; }
+      else if(t.clientX >= w - EDGE_ZONE){ tracking = true; fromLeft = false; }
+      else { tracking = false; }
+      startX = t.clientX; startY = t.clientY; done = false;
+    }, {passive:true});
+    scrim.addEventListener("touchmove", function(e){
+      if(!tracking || done) return;
+      var t = e.touches[0];
+      var dx = t.clientX - startX, dy = t.clientY - startY;
+      if(Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx)){ tracking = false; return; }
+      var towardCenter = fromLeft ? dx : -dx;
+      if(towardCenter > THRESHOLD){
+        done = true;
+        tracking = false;
+        onDismiss();
+      }
+    }, {passive:true});
+    scrim.addEventListener("touchend", function(){ tracking = false; });
+  }
+
+  function openAddModal(existing){
+    editingId = existing ? existing.id : null;
+    formState = existing
+      ? { icon: existing.icon, color: existing.color, mode: existing.mode, bgImage: existing.bgImage || null,
+          bgZoom: existing.bgZoom || 1, bgPosX: existing.bgPosX != null ? existing.bgPosX : 68, bgPosY: existing.bgPosY != null ? existing.bgPosY : 68 }
+      : { icon: EMOJIS[Math.floor(Math.random()*EMOJIS.length)], color: COLORS[Math.floor(Math.random()*COLORS.length)], mode: "since", bgImage: null,
+          bgZoom: 1, bgPosX: 68, bgPosY: 68 };
+
+    var scrim = document.createElement("div");
+    scrim.className = "scrim center";
+    scrim.innerHTML =
+      '<div class="modal">' +
+        '<div class="modal-head"><h3>' + (existing ? "編集" : "新しいイベント") + '</h3><button class="icon-btn" id="closeModal">&times;</button></div>' +
+        '<label>名前</label>' +
+        '<input type="text" id="f_name" placeholder="例：観葉植物の水やり" value="' + (existing ? escapeHtml(existing.name) : "") + '">' +
+
+        '<label>種類</label>' +
+        '<div class="mode-toggle">' +
+          '<button type="button" data-mode="since" class="' + (formState.mode==="since"?"sel":"") + '">最後にやった日から</button>' +
+          '<button type="button" data-mode="until" class="' + (formState.mode==="until"?"sel":"") + '">予定日まで</button>' +
+        '</div>' +
+
+        '<div id="sinceFields" style="display:' + (formState.mode==="since"?"block":"none") + '">' +
+          '<label>アラートを出す経過日数（任意）</label>' +
+          '<input type="number" id="f_threshold" min="1" placeholder="例：14" value="' + (existing && existing.thresholdDays != null ? existing.thresholdDays : "") + '">' +
+          '<div class="threshold-note">この日数を超えると「そろそろ」表示になります</div>' +
+        '</div>' +
+        '<div id="untilFields" style="display:' + (formState.mode==="until"?"block":"none") + '">' +
+          '<label>予定日</label>' +
+          '<input type="date" id="f_target" value="' + (existing && existing.targetDate ? new Date(existing.targetDate).toISOString().slice(0,10) : "") + '">' +
+        '</div>' +
+
+        '<label>カテゴリ（任意）</label>' +
+        '<input type="text" id="f_category" placeholder="例：家事" value="' + (existing ? escapeHtml(existing.category||"") : "") + '" list="catList">' +
+        '<datalist id="catList">' + categories().map(function(c){ return '<option value="' + escapeHtml(c) + '">'; }).join("") + '</datalist>' +
+
+        '<label>タグ（任意・カンマ区切りで複数指定可）</label>' +
+        '<input type="text" id="f_tags" placeholder="例：屋内, 定期" value="' + (existing && existing.tags && existing.tags.length ? escapeHtml(existing.tags.join(", ")) : "") + '" list="tagList">' +
+        '<datalist id="tagList">' + allTags().map(function(t){ return '<option value="' + escapeHtml(t) + '">'; }).join("") + '</datalist>' +
+
+        '<label class="secret-check"><input type="checkbox" id="f_secret"' + (existing && existing.secret ? " checked" : "") + '> シークレット（パスコードを入れないと履歴を見られないようにする）</label>' +
+        '<div class="secret-field" id="secretPasscodeWrap" style="display:' + (existing && existing.secret ? "block" : "none") + '">' +
+          '<label>パスコード' + (existing && existing.passcodeHash ? '（変更する場合のみ入力）' : '') + '</label>' +
+          '<input type="password" inputmode="numeric" id="f_passcode" placeholder="例：1234" autocomplete="off">' +
+          '<div class="passcode-note">数字・文字どちらも使えます。忘れると本人も履歴に入れなくなるのでご注意ください</div>' +
+        '</div>' +
+
+        '<label>アイコン</label>' +
+        '<div class="emojis" id="emojiPicker">' +
+          EMOJIS.map(function(em){ return '<button type="button" class="emoji-btn' + (formState.icon===em?" sel":"") + '" data-emoji="' + em + '">' + em + '</button>'; }).join("") +
+        '</div>' +
+
+        '<label>カラー</label>' +
+        '<div class="swatches" id="colorPicker">' +
+          COLORS.map(function(c){ return '<div class="swatch' + (formState.color===c?" sel":"") + '" data-color="' + c + '" style="background:' + c + '"></div>'; }).join("") +
+        '</div>' +
+
+        '<label>背景写真（任意）</label>' +
+        '<div class="bg-picker">' +
+          '<label class="bg-file-label">' + (formState.bgImage ? "写真を変更" : "写真を選ぶ") + '<input type="file" id="f_bgfile" accept="image/*"></label>' +
+          '<div class="bg-note">カード右側(約2/3)に表示されます。名前には重なりません</div>' +
+          '<div id="bgAdjustWrap" style="display:' + (formState.bgImage ? "block" : "none") + '">' +
+            '<div class="bg-adjust-preview" id="bgAdjustPreview"></div>' +
+            '<label style="margin-top:10px">拡大・縮小</label>' +
+            '<input type="range" id="f_bgzoom" min="100" max="250" step="1" value="' + Math.round((formState.bgZoom||1)*100) + '">' +
+            '<button type="button" class="bg-remove" id="f_bgremove">写真を削除</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="form-actions">' +
+          (existing ? '<button class="btn-ghost btn-danger" id="deleteBtn">削除</button>' : '') +
+          '<button class="btn-primary" id="saveBtn">保存</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) scrim.remove(); });
+    scrim.querySelector("#closeModal").addEventListener("click", function(){ scrim.remove(); });
+    enableEdgeSwipeDismiss(scrim, function(){ scrim.remove(); });
+
+    scrim.querySelectorAll("[data-mode]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        formState.mode = btn.getAttribute("data-mode");
+        scrim.querySelectorAll("[data-mode]").forEach(function(b){ b.classList.toggle("sel", b===btn); });
+        scrim.querySelector("#sinceFields").style.display = formState.mode==="since" ? "block":"none";
+        scrim.querySelector("#untilFields").style.display = formState.mode==="until" ? "block":"none";
+      });
+    });
+    scrim.querySelectorAll("[data-emoji]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        formState.icon = btn.getAttribute("data-emoji");
+        scrim.querySelectorAll("[data-emoji]").forEach(function(b){ b.classList.toggle("sel", b===btn); });
+      });
+    });
+    scrim.querySelectorAll("[data-color]").forEach(function(sw){
+      sw.addEventListener("click", function(){
+        formState.color = sw.getAttribute("data-color");
+        scrim.querySelectorAll("[data-color]").forEach(function(s){ s.classList.toggle("sel", s===sw); });
+      });
+    });
+
+    setupBgPicker(scrim);
+
+    scrim.querySelector("#f_secret").addEventListener("change", function(e){
+      scrim.querySelector("#secretPasscodeWrap").style.display = e.target.checked ? "block" : "none";
+    });
+
+    if(existing){
+      scrim.querySelector("#deleteBtn").addEventListener("click", function(){
+        if(!confirm('「' + existing.name + '」を削除します。よろしいですか？')) return;
+        deleteEvent(existing.id);
+        scrim.remove();
+        closeDetail();
+        showToast("削除しました");
+      });
+    }
+
+    scrim.querySelector("#saveBtn").addEventListener("click", function(){
+      var name = scrim.querySelector("#f_name").value.trim();
+      if(!name){ showToast("名前を入力してください"); return; }
+      var secretChecked = scrim.querySelector("#f_secret").checked;
+      var passcodeInput = scrim.querySelector("#f_passcode").value;
+      if(secretChecked && !passcodeInput && !(existing && existing.passcodeHash)){
+        showToast("シークレットにはパスコードを設定してください");
+        return;
+      }
+      if(existing && !confirm("変更を保存します。よろしいですか？")) return;
+      var category = scrim.querySelector("#f_category").value.trim();
+      var tagsRaw = scrim.querySelector("#f_tags").value;
+      var tags = tagsRaw.split(/[,、]/).map(function(t){ return t.trim(); }).filter(function(t){ return t; });
+      var seenTags = {};
+      tags = tags.filter(function(t){ if(seenTags[t]) return false; seenTags[t] = true; return true; });
+      var now = Date.now();
+      var ev = existing ? Object.assign({}, existing) : {
+        id: uid(), createdAt: now, lastDone: now, localLogs: []
+      };
+      ev.name = name;
+      ev.mode = formState.mode;
+      ev.icon = formState.icon;
+      ev.color = formState.color;
+      ev.category = category;
+      ev.tags = tags;
+      ev.secret = secretChecked;
+      if(secretChecked){
+        ev.passcodeHash = passcodeInput ? hashPasscode(passcodeInput) : (existing ? existing.passcodeHash : null);
+        // Stay visible right after setting it up (the user just entered the
+        // passcode themselves); it locks again on the next reload, or right
+        // away via the "隠す" button in the detail view.
+        unlockSecret(ev.id);
+      } else {
+        ev.passcodeHash = null;
+        unlockSecret(ev.id);
+      }
+      ev.bgImage = formState.bgImage || null;
+      ev.bgZoom = formState.bgImage ? (formState.bgZoom || 1) : null;
+      ev.bgPosX = formState.bgImage ? (formState.bgPosX != null ? formState.bgPosX : 68) : null;
+      ev.bgPosY = formState.bgImage ? (formState.bgPosY != null ? formState.bgPosY : 68) : null;
+      if(formState.mode === "since"){
+        var th = scrim.querySelector("#f_threshold").value;
+        ev.thresholdDays = th ? parseInt(th,10) : null;
+        ev.targetDate = null;
+        if(!existing) ev.lastDone = now;
+      } else {
+        var t = scrim.querySelector("#f_target").value;
+        ev.targetDate = t ? new Date(t + "T00:00:00").getTime() : now;
+        ev.thresholdDays = null;
+      }
+      if(!("id" in ev)) return;
+
+      var isNew = !existing;
+      upsertEvent(ev).then(function(){
+        if(isNew && !state.db){ render(); }
+      });
+      if(isNew){
+        var idx = state.events.findIndex(function(e){ return e.id === ev.id; });
+        if(idx === -1) state.events.push(ev);
+      }
+      render();
+      scrim.remove();
+      showToast(existing ? "更新しました" : "追加しました");
+    });
+  }
+
+  // ---------- detail drawer ----------
+  var activeDetailId = null;
+
+  function closeDetail(){
+    activeDetailId = null;
+    var s = document.getElementById("detailScrim");
+    if(s) s.remove();
+  }
+
+  function openDetail(id){
+    var ev = state.events.find(function(e){ return e.id === id; });
+    if(!ev) return;
+    activeDetailId = id;
+    closeDetail();
+
+    var scrim = document.createElement("div");
+    scrim.className = "scrim";
+    scrim.id = "detailScrim";
+    var st = statusFor(ev);
+    var dp = dayParts(ev);
+
+    var headHtml = ev.bgImage
+      ? (
+          '<div class="panel-hero">' +
+            bgImgTag(ev, "panel-hero-img") +
+            '<button class="icon-btn" id="closeDetail">&times;</button>' +
+            '<div>' +
+              '<div class="dot" style="margin-bottom:8px">' + ev.icon + '</div>' +
+              '<div class="panel-hero-name">' + escapeHtml(ev.name) + (ev.secret ? '<span class="secret-lock" title="シークレット">🔒</span>' : '') + '</div>' +
+            '</div>' +
+          '</div>'
+        )
+      : (
+          '<div class="panel-head panel-no-hero">' +
+            '<div class="dot" style="background:' + ev.color + '22;color:' + ev.color + '">' + ev.icon + '</div>' +
+            '<button class="icon-btn" id="closeDetail">&times;</button>' +
+          '</div>'
+        );
+
+    scrim.innerHTML =
+      '<div class="panel">' +
+        headHtml +
+        '<div class="panel-body">' +
+        (ev.bgImage ? '' : '<h2>' + escapeHtml(ev.name) + (ev.secret ? '<span class="secret-lock" title="シークレット">🔒</span>' : '') + '</h2>') +
+        (ev.category ? '<div class="card-cat" style="margin-top:4px">' + escapeHtml(ev.category) + '</div>' : '') +
+        (ev.tags && ev.tags.length ? '<div class="card-tags" style="margin-top:6px">' + tagChipsHtml(ev, 8) + '</div>' : '') +
+        '<div class="detail-hero' + (dp.dateMode ? ' date-mode' : '') + '" style="margin-top:14px" data-daytap="' + ev.id + '" title="タップで表示切替">' +
+          '<span class="detail-num mono">' + dp.numHtml + '</span>' +
+          (dp.dateMode ? '<span class="unit">' + dp.unitText + '</span>' : '') +
+          '<span class="pill ' + st.cls + '">' + st.label + '</span>' +
+        '</div>' +
+        '<div id="statRow" class="stat-row"></div>' +
+        (ev.mode==="since" && !state.locked ?
+          '<div style="display:flex;gap:8px">' +
+            '<button class="btn-primary" id="detailRecord" style="flex:1">今すぐ記録</button>' +
+            '<button class="btn-ghost" id="detailRecordNote">メモを付けて記録</button>' +
+          '</div>'
+          : (ev.mode==="since" ? '<div class="card-cat" style="margin-top:2px">🔒 ロック中は記録できません</div>' : '')) +
+        '<div class="hist-title">履歴（タップして編集）</div>' +
+        '<div id="histList">読み込み中...</div>' +
+        '<div class="detail-actions">' +
+          (ev.secret ? '<button class="btn-ghost" id="hideSecretBtn">🔒 隠す</button>' : '') +
+          '<button class="btn-ghost" id="editBtn">編集</button>' +
+          '<button class="btn-ghost btn-danger" id="delBtn">削除</button>' +
+        '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) closeDetail(); });
+    scrim.querySelector("#closeDetail").addEventListener("click", closeDetail);
+    var heroCount = scrim.querySelector("[data-daytap]");
+    if(heroCount){
+      heroCount.addEventListener("click", function(e){
+        e.stopPropagation();
+        dayDisplayMode[ev.id] = ((dayDisplayMode[ev.id] || 0) + 1) % 3;
+        render();
+        openDetail(ev.id);
+      });
+    }
+    scrim.querySelector("#editBtn").addEventListener("click", function(){ openAddModal(ev); });
+    if(ev.secret){
+      scrim.querySelector("#hideSecretBtn").addEventListener("click", function(){
+        relockSecret(ev.id);
+        closeDetail();
+        render();
+        showToast("シークレットを隠しました");
+      });
+    }
+    scrim.querySelector("#delBtn").addEventListener("click", function(){
+      if(!confirm('「' + ev.name + '」を削除します。よろしいですか？')) return;
+      deleteEvent(ev.id);
+      closeDetail();
+      showToast("削除しました");
+    });
+    if(ev.mode === "since" && !state.locked){
+      scrim.querySelector("#detailRecord").addEventListener("click", function(){ recordNow(ev.id); });
+      scrim.querySelector("#detailRecordNote").addEventListener("click", function(){ openLogModal(ev, null); });
+    }
+
+    getLogs(ev.id).then(function(logs){
+      var histEl = scrim.querySelector("#histList");
+      var statEl = scrim.querySelector("#statRow");
+      if(ev.mode === "since"){
+        var gaps = [];
+        for(var i=0;i<logs.length-1;i++){
+          gaps.push(daysBetween(logs[i+1].at, logs[i].at));
+        }
+        var avg = gaps.length ? Math.round(gaps.reduce(function(a,b){return a+b;},0)/gaps.length) : null;
+        var max = gaps.length ? Math.max.apply(null, gaps) : null;
+        statEl.innerHTML =
+          '<div class="stat"><div class="k">記録回数</div><div class="v mono">' + logs.length + '</div></div>' +
+          '<div class="stat"><div class="k">平均間隔</div><div class="v mono">' + (avg!=null ? avg+"日" : "-") + '</div></div>' +
+          '<div class="stat"><div class="k">最長間隔</div><div class="v mono">' + (max!=null ? max+"日" : "-") + '</div></div>';
+        if(logs.length === 0){
+          histEl.innerHTML = '<div class="hist-ago">まだ記録がありません</div>';
+        }else{
+          histEl.innerHTML = logs.map(function(l){
+            var dt = new Date(l.at);
+            var ago = daysBetween(l.at, Date.now());
+            return (
+              '<div class="hist-item" data-log="' + (l.id||"") + '">' +
+                '<div class="hist-main">' +
+                  '<div class="hist-date-row"><span>' + dt.toLocaleDateString("ja-JP") + '</span><span class="hist-ago">' + (ago===0?"今日":ago+"日前") + '</span></div>' +
+                  (l.note ? '<div class="hist-note">' + escapeHtml(l.note) + '</div>' : '') +
+                '</div>' +
+              '</div>'
+            );
+          }).join("");
+          histEl.querySelectorAll(".hist-item").forEach(function(row){
+            row.addEventListener("click", function(){
+              var logId = row.getAttribute("data-log");
+              var log = logs.find(function(l){ return (l.id||"") === logId; });
+              if(log) openLogModal(ev, log);
+            });
+          });
+        }
+      } else {
+        var remain = daysBetween(Date.now(), ev.targetDate);
+        statEl.innerHTML =
+          '<div class="stat"><div class="k">予定日</div><div class="v mono">' + new Date(ev.targetDate).toLocaleDateString("ja-JP") + '</div></div>' +
+          '<div class="stat"><div class="k">状態</div><div class="v">' + (remain>=0 ? "あと"+remain+"日" : (-remain)+"日超過") + '</div></div>';
+        histEl.innerHTML = '<div class="hist-ago">カウントダウンのイベントには記録履歴はありません</div>';
+      }
+    });
+  }
+
+  // ---------- record / edit-log modal (date + optional comment) ----------
+  function toDateInputValue(ms){
+    var d = new Date(ms);
+    var pad = function(n){ return String(n).padStart(2,"0"); };
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+
+  function openLogModal(ev, existingLog){
+    var scrim = document.createElement("div");
+    scrim.className = "scrim center";
+    var defaultDate = existingLog ? existingLog.at : Date.now();
+    scrim.innerHTML =
+      '<div class="modal">' +
+        '<div class="modal-head"><h3>' + (existingLog ? "記録を編集" : "記録する") + '</h3><button class="icon-btn" id="closeLogModal">&times;</button></div>' +
+        '<label>日付</label>' +
+        '<input type="date" id="lg_date" value="' + toDateInputValue(defaultDate) + '">' +
+        '<label>メモ（任意）</label>' +
+        '<textarea id="lg_note" rows="3" placeholder="例：ちょっと元気がなかったので多めに水やり">' + (existingLog ? escapeHtml(existingLog.note||"") : "") + '</textarea>' +
+        '<div class="form-actions">' +
+          (existingLog ? '<button class="btn-ghost btn-danger" id="lg_delete">削除</button>' : '') +
+          '<button class="btn-primary" id="lg_save">' + (existingLog ? "保存" : "記録する") + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) scrim.remove(); });
+    scrim.querySelector("#closeLogModal").addEventListener("click", function(){ scrim.remove(); });
+
+    if(existingLog){
+      scrim.querySelector("#lg_delete").addEventListener("click", function(){
+        if(!confirm("この記録を削除します。よろしいですか？")) return;
+        deleteLog(ev.id, existingLog.id).then(function(){
+          showToast("記録を削除しました");
+          render();
+          if(activeDetailId === ev.id) openDetail(ev.id);
+        });
+        scrim.remove();
+      });
+    }
+
+    scrim.querySelector("#lg_save").addEventListener("click", function(){
+      var dateVal = scrim.querySelector("#lg_date").value;
+      var note = scrim.querySelector("#lg_note").value.trim();
+      if(!dateVal){ showToast("日付を入力してください"); return; }
+      if(existingLog && !confirm("変更を保存します。よろしいですか？")) return;
+      // keep time-of-day from the original (or now, for a new entry) so same-day ordering stays stable
+      var base = new Date(dateVal + "T00:00:00");
+      var now = new Date();
+      base.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+      var at = base.getTime();
+
+      var work = existingLog
+        ? updateLog(ev.id, existingLog.id, at, note)
+        : addLog(ev.id, at, note);
+
+      work.then(function(){
+        showToast(existingLog ? "更新しました" : (escapeHtml(ev.name) + " を記録しました"));
+        render();
+        if(activeDetailId === ev.id) openDetail(ev.id);
+      });
+      scrim.remove();
+    });
+  }
+
+  // ---------- CSV export ----------
+  function toCsv(){
+    var rows = [["名前","種類","カテゴリ","タグ","経過/残り日数(今日時点)","最終記録日","予定日","アラート閾値(日)"]];
+    state.events.filter(function(ev){ return !isSecretLocked(ev); }).forEach(function(ev){
+      var d = elapsedDaysFor(ev);
+      rows.push([
+        ev.name,
+        ev.mode === "since" ? "経過" : "カウントダウン",
+        ev.category || "",
+        (ev.tags && ev.tags.length) ? ev.tags.join("; ") : "",
+        d,
+        ev.lastDone ? new Date(ev.lastDone).toLocaleDateString("ja-JP") : "",
+        ev.targetDate ? new Date(ev.targetDate).toLocaleDateString("ja-JP") : "",
+        ev.thresholdDays != null ? ev.thresholdDays : ""
+      ]);
+    });
+    return rows.map(function(r){
+      return r.map(function(v){
+        var s = String(v == null ? "" : v);
+        if(s.indexOf(",") !== -1 || s.indexOf('"') !== -1){
+          s = '"' + s.replace(/"/g,'""') + '"';
+        }
+        return s;
+      }).join(",");
+    }).join("\r\n");
+  }
+
+  function hasClaudeRuntime(){
+    return typeof window.claude !== "undefined" && typeof window.claude.use === "function";
+  }
+
+  async function useCapability(name){
+    if(!hasClaudeRuntime()) return null;
+    try{ return await window.claude.use(name); }catch(e){ return null; }
+  }
+
+  async function exportCsv(){
+    var csv = "﻿" + toCsv();
+    var downloads = await useCapability("downloads");
+    if(downloads){
+      try{
+        await downloads.save({ filename: "sorosoro.csv", data: csv });
+        showToast("CSVを書き出しました");
+      }catch(e){
+        showToast("書き出しをキャンセルしました");
+      }
+    } else {
+      var blob = new Blob([csv], {type:"text/csv"});
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "sorosoro.csv";
+      a.click();
+    }
+  }
+
+  // ---------- CSV import ----------
+  // A small RFC4180-ish CSV parser: handles quoted fields, escaped quotes ("")
+  // and commas/newlines inside quotes. Works for exports from SinceTimer,
+  // spreadsheets, or this app's own CSV.
+  function parseCsv(text){
+    text = text.replace(/^﻿/, ""); // strip BOM
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    for(var i = 0; i < text.length; i++){
+      var c = text[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field += '"'; i++; }
+          else{ inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if(c === '"'){ inQuotes = true; }
+        else if(c === ","){ row.push(field); field = ""; }
+        else if(c === "\n" || c === "\r"){
+          if(c === "\r" && text[i+1] === "\n") i++;
+          row.push(field); field = "";
+          if(row.length > 1 || row[0] !== ""){ rows.push(row); }
+          row = [];
+        } else {
+          field += c;
+        }
+      }
+    }
+    if(field !== "" || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(function(r){ return r.length && !(r.length===1 && r[0]==="") ; });
+  }
+
+  // Accepts common date shapes: ISO (2024-01-05), slashed (2024/1/5),
+  // Japanese (2024年1月5日), and anything Date.parse() understands.
+  function parseFlexibleDate(str){
+    if(str == null) return null;
+    str = String(str).trim();
+    if(!str) return null;
+    var m = str.match(/^(\d{4})[年\/\-](\d{1,2})[月\/\-](\d{1,2})日?/);
+    if(m){
+      var d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+      if(!isNaN(d.getTime())) return d.getTime();
+    }
+    var t = Date.parse(str);
+    if(!isNaN(t)) return t;
+    return null;
+  }
+
+  function guessColumn(headers, candidates){
+    for(var i=0;i<headers.length;i++){
+      var h = (headers[i]||"").toLowerCase().trim();
+      for(var j=0;j<candidates.length;j++){
+        if(h === candidates[j].toLowerCase()) return i;
+      }
+    }
+    for(var i2=0;i2<headers.length;i2++){
+      var h2 = (headers[i2]||"").toLowerCase();
+      for(var j2=0;j2<candidates.length;j2++){
+        if(h2.indexOf(candidates[j2].toLowerCase()) !== -1) return i2;
+      }
+    }
+    return -1;
+  }
+
+  function openImportModal(rows){
+    var hasHeader = true; // assume first row is a header; the mapping UI lets the user re-point columns if wrong
+    var headers = rows[0].map(function(h,i){ return h && h.trim() ? h.trim() : ("列" + (i+1)); });
+    var dataRows = rows.slice(1);
+    if(dataRows.length === 0){ showToast("読み込めるデータ行がありませんでした"); return; }
+
+    var guessName = guessColumn(headers, ["name","名前","イベント名","title","タイトル","項目"]);
+    var guessCat = guessColumn(headers, ["category","カテゴリ","カテゴリー","分類","タグ"]);
+    var guessDate = guessColumn(headers, ["last","最終記録日","最終日","last done","last date","date","日付","最後にやった日","last time"]);
+    var guessNote = guessColumn(headers, ["note","memo","メモ","コメント","comment","notes"]);
+
+    var scrim = document.createElement("div");
+    scrim.className = "scrim center";
+    var colOptions = function(selectedIdx, includeNone){
+      var opts = includeNone ? '<option value="-1">使用しない</option>' : "";
+      headers.forEach(function(h, i){
+        opts += '<option value="' + i + '"' + (i===selectedIdx?" selected":"") + '>' + escapeHtml(h) + '</option>';
+      });
+      return opts;
+    };
+    var previewRows = dataRows.slice(0, 5);
+
+    scrim.innerHTML =
+      '<div class="modal import-modal">' +
+        '<div class="modal-head"><h3>CSVを読み込む</h3><button class="icon-btn" id="closeImport">&times;</button></div>' +
+        '<div class="bg-note">' + dataRows.length + '件のデータが見つかりました。どの列を何として使うか選んでください。</div>' +
+        '<div class="import-map-row"><label>名前(必須)</label><select id="map_name">' + colOptions(guessName, false) + '</select></div>' +
+        '<div class="import-map-row"><label>カテゴリ</label><select id="map_cat">' + colOptions(guessCat, true) + '</select></div>' +
+        '<div class="import-map-row"><label>最終記録日</label><select id="map_date">' + colOptions(guessDate, true) + '</select></div>' +
+        '<div class="import-map-row"><label>メモ</label><select id="map_note">' + colOptions(guessNote, true) + '</select></div>' +
+        '<div class="import-table-wrap"><table class="import-table"><thead><tr>' +
+          headers.map(function(h){ return "<th>" + escapeHtml(h) + "</th>"; }).join("") +
+        '</tr></thead><tbody>' +
+          previewRows.map(function(r){
+            return "<tr>" + headers.map(function(_,i){ return "<td>" + escapeHtml(r[i]||"") + "</td>"; }).join("") + "</tr>";
+          }).join("") +
+        '</tbody></table></div>' +
+        '<div class="import-summary">先頭' + previewRows.length + '件のプレビューです。名前が空の行はスキップされます。</div>' +
+        '<div class="form-actions">' +
+          '<button class="btn-ghost" id="cancelImport">キャンセル</button>' +
+          '<button class="btn-primary" id="confirmImport">' + dataRows.length + '件を読み込む</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) scrim.remove(); });
+    scrim.querySelector("#closeImport").addEventListener("click", function(){ scrim.remove(); });
+    scrim.querySelector("#cancelImport").addEventListener("click", function(){ scrim.remove(); });
+
+    scrim.querySelector("#confirmImport").addEventListener("click", function(){
+      var nameIdx = parseInt(scrim.querySelector("#map_name").value, 10);
+      var catIdx = parseInt(scrim.querySelector("#map_cat").value, 10);
+      var dateIdx = parseInt(scrim.querySelector("#map_date").value, 10);
+      var noteIdx = parseInt(scrim.querySelector("#map_note").value, 10);
+
+      var toCreate = [];
+      dataRows.forEach(function(r){
+        var name = (r[nameIdx] || "").trim();
+        if(!name) return;
+        var category = catIdx >= 0 ? (r[catIdx] || "").trim() : "";
+        var note = noteIdx >= 0 ? (r[noteIdx] || "").trim() : "";
+        var dateVal = dateIdx >= 0 ? parseFlexibleDate(r[dateIdx]) : null;
+        toCreate.push({ name: name, category: category, note: note, at: dateVal != null ? dateVal : Date.now() });
+      });
+
+      if(toCreate.length === 0){ showToast("読み込める行がありませんでした"); return; }
+
+      scrim.querySelector("#confirmImport").textContent = "読み込み中...";
+      scrim.querySelector("#confirmImport").disabled = true;
+
+      var chain = Promise.resolve();
+      toCreate.forEach(function(item){
+        chain = chain.then(function(){
+          var now = Date.now();
+          var ev = {
+            id: uid(), name: item.name, mode: "since", icon: EMOJIS[Math.floor(Math.random()*EMOJIS.length)],
+            color: COLORS[Math.floor(Math.random()*COLORS.length)], category: item.category,
+            thresholdDays: null, targetDate: null, lastDone: item.at, createdAt: now, localLogs: []
+          };
+          if(!state.db){
+            var idx = state.events.findIndex(function(e){ return e.id === ev.id; });
+            if(idx === -1) state.events.push(ev);
+          }
+          return upsertEvent(ev).then(function(){
+            return addLog(ev.id, item.at, item.note);
+          });
+        });
+      });
+      chain.then(function(){
+        render();
+        scrim.remove();
+        showToast(toCreate.length + "件のイベントを読み込みました");
+      }).catch(function(){
+        scrim.remove();
+        showToast("読み込み中にエラーが発生しました");
+      });
+    });
+  }
+
+  function importCsvFile(file){
+    var reader = new FileReader();
+    reader.onerror = function(){ showToast("ファイルを読み込めませんでした"); };
+    reader.onload = function(){
+      try{
+        var rows = parseCsv(String(reader.result));
+        if(rows.length < 2){ showToast("データが見つかりませんでした"); return; }
+        openImportModal(rows);
+      }catch(e){
+        showToast("CSVの解析に失敗しました");
+      }
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  // ---------- SinceTimer (.sqlite/.db) import ----------
+  // SinceTimer (Android, com.codingfeline.sincetimer) stores its data as a Room
+  // SQLite database with tables: timer(id,name,category_id,created_at,updated_at),
+  // category(id,name,type), history(id,timer_id,timestamp,note,...). We read it
+  // client-side with sql.js (SQLite compiled to WebAssembly) and map each timer
+  // to a "since" event, with every history row becoming a log entry (so the
+  // averages/history view fill in correctly, not just a single last-done date).
+  var SQLJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.5.0/";
+  var sqlJsPromise = null;
+  function loadSqlJs(){
+    if(sqlJsPromise) return sqlJsPromise;
+    sqlJsPromise = new Promise(function(resolve, reject){
+      if(window.initSqlJs){ resolve(window.initSqlJs); return; }
+      var s = document.createElement("script");
+      s.src = SQLJS_CDN + "sql-wasm.js";
+      s.onload = function(){ resolve(window.initSqlJs); };
+      s.onerror = function(){ reject(new Error("sql.js failed to load")); };
+      document.head.appendChild(s);
+    });
+    return sqlJsPromise;
+  }
+
+  function readFileAsArrayBuffer(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ reject(new Error("read failed")); };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function importSqliteFile(file){
+    showToast("SinceTimerのデータを読み込み中...");
+    loadSqlJs()
+      .then(function(initSqlJs){
+        return initSqlJs({ locateFile: function(f){ return SQLJS_CDN + f; } });
+      })
+      .then(function(SQL){
+        return readFileAsArrayBuffer(file).then(function(buf){
+          return { SQL: SQL, buf: buf };
+        });
+      })
+      .then(function(o){
+        var db;
+        try{
+          db = new o.SQL.Database(new Uint8Array(o.buf));
+        }catch(e){
+          throw new Error("not a valid sqlite file");
+        }
+        var res;
+        try{
+          res = db.exec(
+            "SELECT t.id as timer_id, t.name as timer_name, t.created_at as timer_created_at, " +
+            "c.name as category_name, h.timestamp as h_ts, h.note as h_note " +
+            "FROM timer t LEFT JOIN category c ON c.id = t.category_id " +
+            "LEFT JOIN history h ON h.timer_id = t.id"
+          );
+        } finally {
+          db.close();
+        }
+        if(!res.length){ showToast("SinceTimerのデータが見つかりませんでした"); return; }
+        var cols = res[0].columns;
+        var colIdx = {};
+        cols.forEach(function(c,i){ colIdx[c] = i; });
+        var timers = {};
+        var order = [];
+        res[0].values.forEach(function(row){
+          var tid = row[colIdx.timer_id];
+          if(!timers[tid]){
+            timers[tid] = {
+              name: row[colIdx.timer_name],
+              category: row[colIdx.category_name] || "",
+              createdAt: row[colIdx.timer_created_at],
+              logs: []
+            };
+            order.push(tid);
+          }
+          var ts = row[colIdx.h_ts];
+          if(ts != null){
+            timers[tid].logs.push({ at: ts, note: row[colIdx.h_note] || "" });
+          }
+        });
+        openSqliteImportModal(timers, order);
+      })
+      .catch(function(e){
+        console.error(e);
+        showToast("SinceTimerデータの読み込みに失敗しました。ファイルが破損しているか、想定と異なる形式の可能性があります");
+      });
+  }
+
+  function performSqliteImport(timers, order){
+    var chain = Promise.resolve();
+    var count = 0;
+    order.forEach(function(tid){
+      var t = timers[tid];
+      if(!t.name) return;
+      count++;
+      chain = chain.then(function(){
+        var now = Date.now();
+        var logs = t.logs.slice().sort(function(a,b){ return a.at - b.at; });
+        var lastDone = logs.length ? logs[logs.length-1].at : (t.createdAt || now);
+        var ev = {
+          id: uid(), name: t.name, mode: "since",
+          icon: EMOJIS[Math.floor(Math.random()*EMOJIS.length)],
+          color: COLORS[Math.floor(Math.random()*COLORS.length)],
+          category: t.category, thresholdDays: null, targetDate: null,
+          lastDone: lastDone, createdAt: t.createdAt || now, localLogs: []
+        };
+        if(!state.db){
+          var idx = state.events.findIndex(function(e){ return e.id === ev.id; });
+          if(idx === -1) state.events.push(ev);
+        }
+        return upsertEvent(ev).then(function(){
+          var logChain = Promise.resolve();
+          logs.forEach(function(l){
+            logChain = logChain.then(function(){ return addLog(ev.id, l.at, l.note); });
+          });
+          return logChain;
+        });
+      });
+    });
+    return chain.then(function(){ return count; });
+  }
+
+  function openSqliteImportModal(timers, order){
+    var totalLogs = 0;
+    order.forEach(function(tid){ totalLogs += timers[tid].logs.length; });
+    var scrim = document.createElement("div");
+    scrim.className = "scrim center";
+    var previewList = order.slice(0, 8).map(function(tid){
+      var t = timers[tid];
+      return (
+        '<div class="hist-item" style="cursor:default">' +
+          '<div class="hist-main"><div class="hist-date-row"><span>' + escapeHtml(t.name) + '</span>' +
+          '<span class="hist-ago">' + t.logs.length + '件</span></div>' +
+          (t.category ? '<div class="hist-note">' + escapeHtml(t.category) + '</div>' : '') +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+    scrim.innerHTML =
+      '<div class="modal">' +
+        '<div class="modal-head"><h3>SinceTimerのデータを読み込む</h3><button class="icon-btn" id="closeSqlite">&times;</button></div>' +
+        '<div class="bg-note">' + order.length + '件のイベント、' + totalLogs + '件の記録が見つかりました。すべて「最後にやった日から」タイプとして読み込みます。</div>' +
+        '<div class="import-table-wrap" style="max-height:230px">' + previewList +
+          (order.length > 8 ? '<div class="hist-ago" style="padding:8px 2px">他 ' + (order.length - 8) + '件...</div>' : '') +
+        '</div>' +
+        '<div class="form-actions">' +
+          '<button class="btn-ghost" id="cancelSqlite">キャンセル</button>' +
+          '<button class="btn-primary" id="confirmSqlite">読み込む</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(scrim);
+    scrim.addEventListener("click", function(e){ if(e.target === scrim) scrim.remove(); });
+    scrim.querySelector("#closeSqlite").addEventListener("click", function(){ scrim.remove(); });
+    scrim.querySelector("#cancelSqlite").addEventListener("click", function(){ scrim.remove(); });
+    scrim.querySelector("#confirmSqlite").addEventListener("click", function(){
+      var btn = scrim.querySelector("#confirmSqlite");
+      btn.textContent = "読み込み中..."; btn.disabled = true;
+      performSqliteImport(timers, order).then(function(count){
+        render();
+        scrim.remove();
+        showToast(count + "件のイベントを読み込みました");
+      }).catch(function(e){
+        console.error(e);
+        scrim.remove();
+        showToast("読み込み中にエラーが発生しました");
+      });
+    });
+  }
+
+  // ---------- wiring ----------
+  $("#openAdd").addEventListener("click", function(){ openAddModal(null); });
+  $("#searchInput").addEventListener("input", function(e){ state.search = e.target.value; render(); });
+  $("#sortSel").value = state.sort;
+  $("#sortSel").addEventListener("change", function(e){ state.sort = e.target.value; saveSort(e.target.value); render(); });
+
+  var optionsMenu = $("#optionsMenu");
+  var optionsDropdown = $("#optionsDropdown");
+  function closeOptionsMenu(){ optionsDropdown.hidden = true; }
+  $("#optionsToggle").addEventListener("click", function(e){
+    e.stopPropagation();
+    optionsDropdown.hidden = !optionsDropdown.hidden;
+  });
+  document.addEventListener("click", function(e){
+    if(!optionsDropdown.hidden && optionsMenu && !optionsMenu.contains(e.target)){
+      closeOptionsMenu();
+    }
+  });
+  $("#exportCsvBtn").addEventListener("click", function(){
+    exportCsv();
+    closeOptionsMenu();
+  });
+  $("#showSecretBtn").addEventListener("click", function(){
+    closeOptionsMenu();
+    requestGenericPasscode();
+  });
+  (function renderThemeSwatches(){
+    var wrap = $("#themeSwatches");
+    wrap.innerHTML = THEMES.map(function(t){
+      return '<button type="button" class="theme-swatch' + (t.key===currentTheme?" sel":"") +
+        '" data-theme-key="' + t.key + '" style="background:' + t.swatch + '" title="' + escapeHtml(t.label) + '"></button>';
+    }).join("");
+    wrap.querySelectorAll(".theme-swatch").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var key = btn.getAttribute("data-theme-key");
+        applyTheme(key);
+        saveTheme(key);
+        wrap.querySelectorAll(".theme-swatch").forEach(function(b){ b.classList.toggle("sel", b===btn); });
+      });
+    });
+  })();
+  $("#importFile").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    closeOptionsMenu();
+    if(!file) return;
+    importCsvFile(file);
+    e.target.value = "";
+  });
+  $("#importSqliteFile").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    closeOptionsMenu();
+    if(!file) return;
+    importSqliteFile(file);
+    e.target.value = "";
+  });
+
+  function updateViewButtons(){
+    document.querySelectorAll("#viewToggle .view-btn").forEach(function(btn){
+      btn.classList.toggle("active", btn.getAttribute("data-view") === state.view);
+    });
+  }
+  document.querySelectorAll("#viewToggle .view-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      state.view = btn.getAttribute("data-view");
+      saveView(state.view);
+      updateViewButtons();
+      render();
+    });
+  });
+  updateViewButtons();
+
+  // ---------- lock toggle (hides the one-tap 今やった buttons) ----------
+  var lockBtn = $("#lockToggle");
+  var lockLabel = $("#lockLabel");
+  function updateLockButton(){
+    if(!lockBtn) return;
+    lockBtn.classList.toggle("active", state.locked);
+    lockLabel.textContent = state.locked ? "ロック中" : "ロック";
+    lockBtn.title = state.locked ? "タップして記録ボタンを解除" : "記録ボタンをロック";
+  }
+  if(lockBtn){
+    lockBtn.addEventListener("click", function(){
+      state.locked = !state.locked;
+      saveLock(state.locked);
+      updateLockButton();
+      render();
+      if(activeDetailId) openDetail(activeDetailId);
+      showToast(state.locked ? "記録ボタンをロックしました" : "ロックを解除しました");
+    });
+  }
+  updateLockButton();
+
+  // ---------- text size toggle ----------
+  var TEXTSIZE_KEY = "keika_dot_textsize_v1";
+  var TEXTSIZES = [
+    { key: "s",  label: "小" },
+    { key: "m",  label: "標準" },
+    { key: "l",  label: "大" },
+    { key: "xl", label: "特大" }
+  ];
+  function loadTextSize(){
+    try{
+      var v = localStorage.getItem(TEXTSIZE_KEY);
+      return TEXTSIZES.some(function(t){ return t.key === v; }) ? v : "m";
+    }catch(e){ return "m"; }
+  }
+  function saveTextSize(v){
+    try{ localStorage.setItem(TEXTSIZE_KEY, v); }catch(e){}
+  }
+  var textSize = loadTextSize();
+  var textSizeBtn = $("#textSizeToggle");
+  var textSizeLabel = $("#textSizeLabel");
+  function applyTextSize(){
+    if(textSize === "m"){
+      document.documentElement.removeAttribute("data-textsize");
+    } else {
+      document.documentElement.setAttribute("data-textsize", textSize);
+    }
+    if(textSizeLabel){
+      var found = TEXTSIZES.find(function(t){ return t.key === textSize; });
+      textSizeLabel.textContent = found ? found.label : "標準";
+    }
+    if(textSizeBtn) textSizeBtn.classList.toggle("active", textSize !== "m");
+  }
+  if(textSizeBtn){
+    textSizeBtn.addEventListener("click", function(){
+      var idx = TEXTSIZES.findIndex(function(t){ return t.key === textSize; });
+      textSize = TEXTSIZES[(idx + 1) % TEXTSIZES.length].key;
+      saveTextSize(textSize);
+      applyTextSize();
+      showToast("文字サイズ: " + TEXTSIZES.find(function(t){ return t.key === textSize; }).label);
+    });
+  }
+  applyTextSize();
+
+  // ---------- light/dark mode toggle ----------
+  var colorModeBtn = $("#colorModeToggle");
+  if(colorModeBtn){
+    colorModeBtn.classList.toggle("active", currentColorMode !== "auto");
+    colorModeBtn.addEventListener("click", function(){
+      var idx = MODES.indexOf(currentColorMode);
+      var next = MODES[(idx + 1) % MODES.length];
+      applyColorMode(next);
+      saveColorMode(next);
+      colorModeBtn.classList.toggle("active", next !== "auto");
+      showToast("表示: " + MODE_META[next].label);
+    });
+  }
+
+  // periodic re-render so elapsed-day numbers roll over at local midnight
+  setInterval(render, 60 * 1000);
+
+  // ---------- boot ----------
+  function seedSampleIfEmpty(){
+    if(state.events.length) return;
+    var now = Date.now();
+    state.events = [
+      { id: uid(), name:"観葉植物の水やり", mode:"since", icon:"🌱", color:COLORS[1], category:"家事", thresholdDays:7, targetDate:null, lastDone: now - 5*DAY, createdAt: now-30*DAY,
+        localLogs:[
+          {id:uid(), at: now - 5*DAY, note:"葉が少し元気なかったので多めに"},
+          {id:uid(), at: now - 12*DAY, note:""},
+          {id:uid(), at: now - 19*DAY, note:"土が完全に乾いていた"}
+        ]
+      },
+      { id: uid(), name:"歯医者", mode:"since", icon:"🩺", color:COLORS[3], category:"通院", thresholdDays:180, targetDate:null, lastDone: now - 120*DAY, createdAt: now-200*DAY,
+        localLogs:[{id:uid(), at: now - 120*DAY, note:"定期検診、異常なし"}]
+      },
+      { id: uid(), name:"車検", mode:"until", icon:"🚗", color:COLORS[4], category:"手続き", thresholdDays:null, targetDate: now + 21*DAY, lastDone:null, createdAt: now-10*DAY, localLogs:[] }
+    ];
+  }
+
+  async function boot(){
+    var db = await useCapability("db");
+    if(db){
+      state.db = db;
+      state.dbReady = true;
+      db.collection("events").onSnapshot(function(snap){
+        state.events = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        if(state.events.length === 0 && !boot._seeded){
+          boot._seeded = true;
+          var now = Date.now();
+          var sample = [
+            { id: uid(), name:"観葉植物の水やり", mode:"since", icon:"🌱", color:COLORS[1], category:"家事", thresholdDays:7, targetDate:null, lastDone: now - 5*DAY, createdAt: now-30*DAY },
+            { id: uid(), name:"歯医者", mode:"since", icon:"🩺", color:COLORS[3], category:"通院", thresholdDays:180, targetDate:null, lastDone: now - 120*DAY, createdAt: now-200*DAY },
+            { id: uid(), name:"車検", mode:"until", icon:"🚗", color:COLORS[4], category:"手続き", thresholdDays:null, targetDate: now + 21*DAY, lastDone:null, createdAt: now-10*DAY }
+          ];
+          sample.forEach(function(ev){ upsertEvent(ev); });
+          if(sample.length){
+            addLog(sample[0].id, now - 5*DAY, "葉が少し元気なかったので多めに");
+            addLog(sample[0].id, now - 12*DAY, "");
+            addLog(sample[0].id, now - 19*DAY, "土が完全に乾いていた");
+          }
+          if(sample.length>1) addLog(sample[1].id, now - 120*DAY, "定期検診、異常なし");
+        }
+        render();
+      }, function(){
+        $("#offlineNote").style.display = "block";
+        state.db = null;
+        state.events = loadLocal();
+        seedSampleIfEmpty();
+        saveLocal();
+        render();
+      });
+    } else {
+      $("#offlineNote").style.display = "block";
+      state.events = loadLocal();
+      seedSampleIfEmpty();
+      saveLocal();
+      render();
+    }
+  }
+
+  applyColorMode(currentColorMode);
+  boot();
+})();
+</script>
+
+<script>
+  // Register the service worker so the app installs (Add to Home Screen)
+  // and keeps working offline once it has been opened at least once.
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){ /* offline-first still degrades gracefully without it */ });
+    });
+  }
+</script>
+
+</body>
+</html>
