@@ -2,7 +2,7 @@
 // Precaches the app shell so it installs and keeps working offline after the
 // first successful load. Bump CACHE_NAME whenever the shell files change so
 // old caches are cleaned up and users pick up the update.
-var CACHE_NAME = "keika-dot-shell-v16";
+var CACHE_NAME = "keika-dot-shell-v17";
 var RUNTIME_CACHE = "keika-dot-runtime-v1";
 
 var SHELL_FILES = [
